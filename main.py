@@ -180,7 +180,7 @@ def logRequest(request: Request):
 
         requestDict[client_host] = new_entry
 
-        update_json_file(requestDict,"JSON/requests.json")
+        update_json_file(requestDict,"JSON/requests")
 
     except Exception as e:
         print("Failed to Log the Request: ",e)
