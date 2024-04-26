@@ -494,19 +494,28 @@ async def switch(current_user: Annotated[User, Depends(get_current_active_user)]
 
 @app.get('/flipswitch/polling/{switchName}/{truthState}')
 async def switchPoll(switchName,truthState):
-    # Load initial state from file if it exists
-    stateDict = {}
     try:
+        stateDict = {}
+
+        if truthState == "0":
+            truthState = False
+        else:
+            truthState = True
+            
         if os.path.exists("JSON/flipSwitches.json"):
-            while bool(stateDict[switchName]["state"]) != bool(truthState):
+            with open("JSON/flipSwitches.json", "r") as file:
+                stateDict = json.load(file)
+
+            while bool(stateDict[switchName]["state"]) != truthState:
                 with open("JSON/flipSwitches.json", "r") as file:
                     stateDict = json.load(file)
-                    await asyncio.sleep(1)
+                await asyncio.sleep(1)
             
             return stateDict[switchName]
     except Exception as e:
-        print(e)
-        return{"Error": e}
+
+        return {"Error": f"Timeout - {e}"}
+   
 
 
 @app.post("/file-storage/upload/{linkName}")

@@ -175,6 +175,14 @@ now = connection()
 
 auth = now.authenticate()
 
+'''switch = flipSwitch()
+switch.setTrue(auth,'testState')'''
+
+r = requests.get("http://localhost:8000/flipswitch/polling/testState/0")
+print(r.json())
+
+
+
 # Location Retrival and Zone info Usage
 '''
 print(now.iLogger_retrieve(auth))

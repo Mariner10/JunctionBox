@@ -163,4 +163,5 @@ cython_debug/
 
 HTML/
 JSON/
+selfServe.py
 .DS_Store
