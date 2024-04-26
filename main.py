@@ -174,13 +174,13 @@ def logRequest(request: Request):
         new_entry = {
             "HOST": client_host,
             "PORT":  client_port,
-            "METHOD": scheme,
+            "METHOD": str(scheme),
             "TIMESTAMP": now.strftime("%m/%d/%Y, %H:%M:%S")
         }
 
         requestDict[client_host] = new_entry
 
-        update_json_file(requestDict,"JSON/requests")
+        update_json_file(requestDict,"requests")
 
     except Exception as e:
         print("Failed to Log the Request: ",e)
@@ -490,6 +490,24 @@ async def switch(current_user: Annotated[User, Depends(get_current_active_user)]
     for key in stateDict:
         print(str(key) + ": " + str(stateDict[key]))
     return {"State": flipSwitch_state}
+
+
+@app.get('/flipswitch/polling/{switchName}/{truthState}')
+async def switchPoll(switchName,truthState):
+    # Load initial state from file if it exists
+    stateDict = {}
+    try:
+        if os.path.exists("JSON/flipSwitches.json"):
+            while bool(stateDict[switchName]["state"]) != bool(truthState):
+                with open("JSON/flipSwitches.json", "r") as file:
+                    stateDict = json.load(file)
+                    await asyncio.sleep(1)
+            
+            return stateDict[switchName]
+    except Exception as e:
+        print(e)
+        return{"Error": e}
+
 
 @app.post("/file-storage/upload/{linkName}")
 def uploadFile(request: Request,current_user: Annotated[User, Depends(get_current_active_user)],linkName,files: List[UploadFile] = File(...)):
