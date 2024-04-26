@@ -32,7 +32,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 users_db = {
-    "carterb": {
+    os.getenv("USERNAME"): {
         "username": os.getenv("USERNAME"),
         "full_name": os.getenv("FULL_NAME"),
         "email": os.getenv("EMAIL"),
@@ -42,7 +42,7 @@ users_db = {
 }
 
 CLI_users_db = {
-    "carterb": {
+    os.getenv("USERNAME"): {
         "username": os.getenv("USERNAME"),
         "full_name": os.getenv("FULL_NAME"),
         "email": os.getenv("EMAIL"),
