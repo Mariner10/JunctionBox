@@ -175,13 +175,29 @@ now = connection()
 
 auth = now.authenticate()
 
-'''switch = flipSwitch()
-switch.setTrue(auth,'testState')'''
+switch = flipSwitch()
 
-r = requests.get("http://localhost:8000/flipswitch/polling/testState/0")
-print(r.json())
+print(switch.getAllStates(auth))
+
+switch.toggle(auth,title='testState')
+
+print(switch.getAllStates(auth))
+
+'''def waitPLease(state,switchName):
+    while True:
+        try:
+            r = requests.get(f"{os.getenv('API_URL')}/flipswitch/polling/{switchName}/{state}")
+        except Exception as e:
+            break
+        responseState = r.json()["state"]
+        if responseState == False:
+            print("bazinga")
+            switch.setTrue(auth,switchName)
+        
 
 
+waitPLease("0","DoorOpen")
+'''
 
 # Location Retrival and Zone info Usage
 '''

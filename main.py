@@ -265,6 +265,11 @@ async def root(request: Request):
 
     return html_as_string
 
+
+@app.get("/heartbeat")
+async def heatbeat():
+    return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now,"%m/%d/%Y, %H:%M:%S")}"}
+
 @app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], request: Request
