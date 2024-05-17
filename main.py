@@ -298,9 +298,7 @@ async def read_users_me(
 
 most_recent_phone_data = {}
 @app.post("/iLogger/publish_data/")
-async def input_current_whereabouts(
-    current_user: Annotated[User, Depends(get_current_active_user)], item: DeviceLocation
-):
+async def input_current_whereabouts(item: DeviceLocation):
     global most_recent_phone_data
 
     current_datetime = datetime.now()
@@ -353,7 +351,7 @@ async def input_current_whereabouts(
 
             
 
-    return [{"Status": "Success", "owner": current_user.username, "Latency": f"{time_difference_seconds}s"}]
+    return [{"Status": "Success", "Latency": f"{time_difference_seconds}s"}]
 
 @app.get("/iLogger/return_data/")
 async def output_current_whereabouts(current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
