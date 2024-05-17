@@ -268,7 +268,7 @@ async def root(request: Request):
 
 @app.get("/heartbeat")
 async def heatbeat():
-    return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now,"%m/%d/%Y, %H:%M:%S")}"}
+    return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now(), '%m/%d/%Y, %H:%M:%S')}"}
 
 @app.post("/token")
 async def login_for_access_token(
