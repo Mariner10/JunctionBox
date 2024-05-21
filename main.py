@@ -328,25 +328,31 @@ async def input_current_whereabouts(item: DeviceLocation):
 
     for zoneInfo in response:
         data = zoneInfo["Data"]
-        properties = data["properties"]
-        name = properties["Name"]
-        
-    # Check if file exists
-    if os.path.isfile(savedLocalesFilename) is True:
+        if data != False:
+            properties = data["properties"]
+            name = properties["Name"]
 
-        with open(savedLocalesFilename) as fn:
-            LocalesDic = dict(json.load(fn))
 
-            for place in LocalesDic:
-                
-                if name == place:
-                    LocalesDic[place]["Number"] = LocalesDic[place]["Number"] + 1
-                    LocalesDic[place]["Timestamps"].append(item.timestamp)
+            # Check if file exists
+            if os.path.isfile(savedLocalesFilename) is True:
 
-                    with open(savedLocalesFilename, 'w') as instances_file:
-                        json.dump(LocalesDic, instances_file, 
-                                            indent=4,  
-                                            separators=(',',': '))
+                with open(savedLocalesFilename) as fn:
+                    LocalesDic = dict(json.load(fn))
+
+                    for place in LocalesDic:
+                        
+                        if name == place:
+                            LocalesDic[place]["Number"] = LocalesDic[place]["Number"] + 1
+                            LocalesDic[place]["Timestamps"].append(item.timestamp)
+
+                            with open(savedLocalesFilename, 'w') as instances_file:
+                                json.dump(LocalesDic, instances_file, 
+                                                    indent=4,  
+                                                    separators=(',',': '))
+                                
+
+        else:
+            print("Not in Zone.")
 
 
             

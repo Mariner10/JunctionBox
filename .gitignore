@@ -165,6 +165,5 @@ HTML/
 JSON/
 selfServe.py
 .DS_Store
-selfServe.py
 JSON/flipSwitches.json
 JSON/requests.json
