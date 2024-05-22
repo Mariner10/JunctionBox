@@ -328,8 +328,8 @@ async def input_current_whereabouts(item: DeviceLocation):
 
     for zoneInfo in response:
         data = zoneInfo["Data"]
-        if data != False:
-            properties = data["properties"]
+        properties = data["properties"]
+        if properties != False:
             name = properties["Name"]
 
 
