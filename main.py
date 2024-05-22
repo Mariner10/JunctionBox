@@ -196,23 +196,21 @@ def update_json_file(stateDict,filename):
         json.dump(stateDict, file)
 
 def current_zone(lat,lon):
-    filename = 'JSON/Zones.json' 
+    filename = 'JSON/Zones.json'
     listObj = {}
-    # Check if file exists
-    if os.path.isfile(filename) is False:
+    
+    if not os.path.isfile(filename):
         return [{"Status": "Failed", "Info": "JSON file not found!"}]
     
-    # Read JSON file
     with open(filename) as fp:
-        listObj = dict(json.load(fp))
-        listObj = listObj["features"]
+        listObj = json.load(fp).get("features", [])
 
     for name in listObj:
-        boolean = turfpyMeasure.boolean_point_in_polygon([lon,lat],name)
-        if boolean == True:
+        boolean = turfpyMeasure.boolean_point_in_polygon([lon, lat], name)
+        if boolean:
             return [{"Status": "Success", "Data": name}]
-        else:
-            return [{"Status": "Failed", "Data": boolean}]
+    
+    return [{"Status": "Failed", "Data": False}]
 
 def cleanup_zipFiles(name: str = None):
     with open("JSON/zipFiles.json", "r") as zipFiles:
@@ -323,36 +321,30 @@ async def input_current_whereabouts(item: DeviceLocation):
     LocalesDic = {}
     
 
-    # get current Zone
-    response = current_zone(item.latitude,item.longitude)
+    response = current_zone(item.latitude, item.longitude)
 
     for zoneInfo in response:
-        data = zoneInfo["Data"]
-        properties = data["properties"]
-        if properties != False:
-            name = properties["Name"]
+        if zoneInfo["Status"] == "Success":
+            data = zoneInfo["Data"]
+            properties = data.get("properties", {})
 
+            if properties:
+                name = properties.get("Name")
 
-            # Check if file exists
-            if os.path.isfile(savedLocalesFilename) is True:
-
-                with open(savedLocalesFilename) as fn:
-                    LocalesDic = dict(json.load(fn))
+                if os.path.isfile(savedLocalesFilename):
+                    with open(savedLocalesFilename) as fn:
+                        LocalesDic = json.load(fn)
 
                     for place in LocalesDic:
-                        
                         if name == place:
-                            LocalesDic[place]["Number"] = LocalesDic[place]["Number"] + 1
+                            LocalesDic[place]["Number"] += 1
                             LocalesDic[place]["Timestamps"].append(item.timestamp)
 
                             with open(savedLocalesFilename, 'w') as instances_file:
-                                json.dump(LocalesDic, instances_file, 
-                                                    indent=4,  
-                                                    separators=(',',': '))
-                                
-
+                                json.dump(LocalesDic, instances_file, indent=4, separators=(',', ': '))
         else:
-            print("Not in Zone.")
+            print("Not in zone. Ignoring.")
+            pass
 
 
             
