@@ -171,7 +171,7 @@ def do_the_map_thing(deviceName):
             print("LocationTypeMap!")
             locationTypeMap(compiledFilename,outputHTML)
             print("Done!\nNext is dailyMarkers!")
-            dailyMarkers(compiledFilename,outputHTML)
+            #dailyMarkers(compiledFilename,outputHTML)
             print("Done!\nNext is heatmap!")
             heatmap(compiledFilename,outputHTML)
             print("Done!\nNext is frequentMarkers!")
