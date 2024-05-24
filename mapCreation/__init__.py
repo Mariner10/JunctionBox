@@ -1,1 +1,0 @@
-print("Map Service Module")
