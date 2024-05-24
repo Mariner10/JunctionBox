@@ -160,21 +160,28 @@ def do_the_map_thing(deviceName):
 
         
         else:
-            print("I do not know how you managed this...")
+            print("I do not know how you managed this... I did at one point though ¯\_(ツ)_/¯")
 
     def mapCreation(name):
         try:
+            print("Map Creation Module Loaded!\nCreating HTML for...\n")
             compiledFilename = f"{main_path}/map/compiled/{name}.csv"
             outputHTML = f"{main_path}/map/{name}/"
             #timeSpentAtHeatmap(compiledFilename,outputHTML,10)
+            print("LocationTypeMap!")
             locationTypeMap(compiledFilename,outputHTML)
+            print("Done!\nNext is dailyMarkers!")
             dailyMarkers(compiledFilename,outputHTML)
+            print("Done!\nNext is heatmap!")
             heatmap(compiledFilename,outputHTML)
+            print("Done!\nNext is frequentMarkers!")
             frequentMarkers(compiledFilename,outputHTML,3)
+            print("Done!\nNext is timestamp geoJson!!")
             timestampGeoJson(compiledFilename,outputHTML)
+            print("All maps created!")
 
-        except IndexError as e:
-            print(e)
+        except Exception as e:
+            print(f"An error occured, {e}")
             pass
 
     def theSauce(device_name):
