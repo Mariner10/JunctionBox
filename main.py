@@ -21,6 +21,7 @@ import json
 import base64
 import ssl
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
+from mapCreation.logsDownloader import do_the_map_thing
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,6 +39,7 @@ users_db = {
         "email": os.getenv("EMAIL"),
         "hashed_password": os.getenv("API_KEY"),
         "disabled": False,
+        "device_name": os.getenv("DEVICE_NAME")
     }
 }
 
@@ -255,13 +257,41 @@ def fileHasBeenUsed(name: str):
                 zipDict[key]["Lifespan"] = now.strftime("%m/%d/%Y, %H:%M:%S")
                 update_json_file(zipDict,"zipFiles")
 
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
+@app.get("/map", response_class=HTMLResponse)
+async def root(request: Request, urrent_user: Annotated[User, Depends(get_current_active_user)]):
     logRequest(request)
     with open('HTML/ZoneMap.html', 'r') as file:  # r to open file in READ mode
         html_as_string = file.read()
 
     return html_as_string
+
+@app.get("/",response_class=HTMLResponse)
+async def get_login():
+
+    with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
+
+        return HTMLResponse(content=file.read(), status_code=200)
+    
+@app.get("/protected", response_class=HTMLResponse)
+async def get_protected_page(request: Request):
+    headers = request.headers
+    authorization: str = headers.get("Authorization")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid or missing token")
+    token = authorization.split(" ")[1]
+
+
+    if (token):
+        try:
+            with open("HTML/endpoints.html", "r") as file:
+                return HTMLResponse(content=file.read(), status_code=200)
+        except FileNotFoundError:
+            raise HTTPException(status_code=500, detail="HTML file not found")
+    else:
+        with open("HTML/denied.html", "r") as file:
+            return HTMLResponse(content=file.read(), status_code=401)
+
+
 
 
 @app.get("/heartbeat")
@@ -286,13 +316,13 @@ async def login_for_access_token(
     )
     return Token(access_token=access_token, token_type="bearer")
 
-'''
+
 @app.get("/users/me/", response_model=User)
 async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     return current_user
-'''
+
 
 most_recent_phone_data = {}
 @app.post("/iLogger/publish_data/")
@@ -317,7 +347,7 @@ async def input_current_whereabouts(item: DeviceLocation):
 
     print(f"Saved phone data: {most_recent_phone_data}")
  
-    savedLocalesFilename = 'JSON/instances.json'
+    savedLocalesFilename = 'JSON/Zones.json'
     LocalesDic = {}
     
 
@@ -678,4 +708,21 @@ async def sendFile(linkName,request: Request):
     except Exception as e:
         return {"Status": "Failed", "Data": f"Could not delete file [ {linkName}.zip ] from server: {e}"}
         
-        
+@app.get("/dataview/iLogger/{mapModelName}/{redownload}",response_class=HTMLResponse)
+async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
+    logRequest(request)
+
+    
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+    if bool(int(redownload)):
+        do_the_map_thing(deviceName)
+    else:
+        pass
+    try:
+        with open(f'mapCreation/map/{deviceName}/{mapModelName}.html', 'r') as file:  # r to open file in READ mode
+            html_as_string = file.read()
+    except Exception:
+        with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
+            html_as_string = file.read()
+    return html_as_string
