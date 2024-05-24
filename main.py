@@ -722,7 +722,8 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
     try:
         with open(f'mapCreation/map/{deviceName}/{mapModelName}.html', 'r') as file:  # r to open file in READ mode
             html_as_string = file.read()
-    except Exception:
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
         with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
             html_as_string = file.read()
     return html_as_string
