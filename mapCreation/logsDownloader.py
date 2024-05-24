@@ -166,7 +166,7 @@ def do_the_map_thing(deviceName):
         try:
             compiledFilename = f"{main_path}/map/compiled/{name}.csv"
             outputHTML = f"{main_path}/map/{name}/"
-            timeSpentAtHeatmap(compiledFilename,outputHTML,10)
+            #timeSpentAtHeatmap(compiledFilename,outputHTML,10)
             locationTypeMap(compiledFilename,outputHTML)
             dailyMarkers(compiledFilename,outputHTML)
             heatmap(compiledFilename,outputHTML)
