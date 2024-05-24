@@ -188,5 +188,4 @@ def do_the_map_thing(deviceName):
 
     theSauce(deviceName)
 
-do_the_map_thing("Yeeter")
 
