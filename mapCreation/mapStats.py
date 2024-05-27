@@ -1,6 +1,6 @@
 import pandas as pd
 import folium
-from folium.plugins import MarkerCluster, HeatMap, HeatMapWithTime, TimestampedGeoJson, AntPath
+from folium.plugins import MarkerCluster, HeatMap, HeatMapWithTime, TimestampedGeoJson, AntPath, PolyLineTextPath
 from datetime import datetime, timedelta
 
 zoom = 5
@@ -352,7 +352,64 @@ def timestampGeoJson(inputCSV,outputHTML):
 
     mymap.save(f"{outputHTML}timestampGeoJson.html")
 
-def lines_between_points(inputCSV,outputHTML):
+def lines_between_points(inputCSV, outputHTML, ):
+    # Step 1: Data Preprocessing
+    df = pd.read_csv(inputCSV)
+
+    # Step 2: Spatial Visualization
+    map_center = [df['Latitude'].mean(), df['Longitude'].mean()]
+    mymap = folium.Map(location=map_center)
+
+    sw = df[['Latitude', 'Longitude']].min().values.tolist()
+    ne = df[['Latitude', 'Longitude']].max().values.tolist()
+
+    mymap.fit_bounds([sw, ne])
+
+    # Step 3: Add lines between points with direction
+    for i in range(len(df) - 1):
+        start_point = (df.loc[i, 'Latitude'], df.loc[i, 'Longitude'])
+        end_point = (df.loc[i + 1, 'Latitude'], df.loc[i + 1, 'Longitude'])
+
+        if i == 0 :          # If first point
+            marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
+                                   popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%Y-%m-%d'))}\n 
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}""",
+                                   icon=folium.Icon(icon= 'star',  prefix= 'glyphicon', color='red'))
+            print("bruh")
+            mymap.add_child(marker)
+
+        if not (i == len(df) - 2 - 2 and i == 0):   # If not the last point
+            marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
+                                   popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%Y-%m-%d'))}\n 
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}""",
+                                   icon=folium.Icon(icon= 'info-sign',  prefix= 'glyphicon', color='gray'))
+            
+            mymap.add_child(marker)
+            
+        if i == len(df) - 2:   # If last point
+            marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
+                                   popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%Y-%m-%d'))}\n 
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}""",
+                                   icon=folium.Icon(icon= 'star',  prefix= 'glyphicon', color='darkred'))
+
+            mymap.add_child(marker)
+        
+
+    
+        
+
+        # Create a PolyLine with direction
+        polyline = folium.PolyLine(locations=[start_point, end_point], color='red', weight=2)
+        mymap.add_child(polyline)
+
+        # Add arrowheads to the PolyLine
+        arrow_text = PolyLineTextPath(polyline, '\u25BA', repeat=True, offset=7, attributes={'font-size': '18', 'fill': 'black'})
+        mymap.add_child(arrow_text)
+
+    # Step 4: Save the map to an HTML file
+    mymap.save(outputHTML)
+
+def viewTodayPath(inputCSV,outputHTML):
     # Step 1: Data Preprocessing
     df = pd.read_csv(inputCSV)
 
@@ -360,6 +417,19 @@ def lines_between_points(inputCSV,outputHTML):
     map_center = [df['Latitude'].mean(), df['Longitude'].mean()]
     mymap = folium.Map(location=map_center, zoom_start=zoom)
 
+    # Step 3: Add lines between points with direction
+    for i in range(len(df) - 1):
+        start_point = (df.loc[i, 'Latitude'], df.loc[i, 'Longitude'])
+        end_point = (df.loc[i + 1, 'Latitude'], df.loc[i + 1, 'Longitude'])
+        time = ((df.loc[i, 'Time Object (EPOCH)']), df.loc[i, 'Time Object (EPOCH)'])
+
+        # Create a PolyLine with direction
+        polyline = AntPath(locations=[start_point, end_point])
+        MarkerCluster(locations=[start_point, end_point],)
+        mymap.add_child(polyline)
+
+    # Step 4: Save the map to an HTML file
+    mymap.save(outputHTML)
 
 
         

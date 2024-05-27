@@ -8,14 +8,14 @@ import csv
 from dotenv import load_dotenv
 load_dotenv()
 
-def do_the_map_thing(deviceName):
+class map_toolkit():
+    def __init__(self,deviceName):
 
+        self.remote_logs_directory = os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY") + f"/{deviceName}/"
+        self.deviceName = deviceName
 
-    remote_logs_directory = os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY") +f"/{deviceName}/"
-
-
-    main_path = str(os.path.join(os.path.dirname(os.path.abspath(__file__))))
-    localLogPath = f"{main_path}/logs/{deviceName}/"
+        self.main_path = str(os.path.join(os.path.dirname(os.path.abspath(__file__))))
+        self.localLogPath = f"{self.main_path}/logs/{deviceName}/"
 
 
 
@@ -29,17 +29,17 @@ def do_the_map_thing(deviceName):
 
 
 
-    def downloadFiles(remotedir):
+    def downloadFiles(self,remotedir):
         cnopts = pysftp.CnOpts()
         cnopts.hostkeys = None    
         sftp=pysftp.Connection(os.getenv("ILOGGER_SERVER_HOSTNAME"),port=int(os.getenv("ILOGGER_SERVER_PORT")) ,username=os.getenv("ILOGGER_SERVER_USERNAME"),cnopts=cnopts)
         print("DOWNLOAD REQUESTED!")
         serverFiles = sftp.listdir(remotedir)
         try:
-            clientFiles = os.listdir(localLogPath)
+            clientFiles = os.listdir(self.localLogPath)
         except FileNotFoundError:
-            os.mkdir(localLogPath)
-            clientFiles = os.listdir(localLogPath)
+            os.mkdir(self.localLogPath)
+            clientFiles = os.listdir(self.localLogPath)
 
         toDownload = []
         final_log = None
@@ -50,27 +50,28 @@ def do_the_map_thing(deviceName):
                 if file not in clientFiles:
                     toDownload.append(file)
                 final_log = file
+                
         
         if len(toDownload) > 1:
             for entry in toDownload:
                 try:
-                    sftp.get(os.path.join(remotedir, entry), os.path.join(localLogPath, entry), preserve_mtime=False)
+                    sftp.get(os.path.join(remotedir, entry), os.path.join(self.localLogPath, entry), preserve_mtime=False)
                     print(f"Successfully downloaded [ {entry} ]")
                 except Exception as e:
                     print(remotedir, entry, e)
                     pass
-            return True
+            return final_log
         else:
             try:
-                sftp.get(os.path.join(remotedir, final_log), os.path.join(localLogPath, final_log), preserve_mtime=False)
+                sftp.get(os.path.join(remotedir, final_log), os.path.join(self.localLogPath, final_log), preserve_mtime=False)
                 print(f"Successfully downloaded last known file [ {final_log} ]")
-                return False
+                return final_log
             except Exception as e:
                 print(remotedir, final_log, e)
 
-    def aggregate_data(devicepath,devicename):
+    def aggregate_data(self,devicepath,devicename):
         csv_Files = []
-        new_File = f"{main_path}/map/compiled/{devicename}.csv"
+        new_File = f"{self.main_path}/map/compiled/{devicename}.csv"
         logPath = f"{devicepath}"
         
         try:
@@ -89,7 +90,7 @@ def do_the_map_thing(deviceName):
                 file = open(filename, 'w')
             except FileNotFoundError:
                 print("NEW File : ", filename)
-                os.mkdir( f"{main_path}/map/compiled" )
+                os.mkdir( f"{self.main_path}/map/compiled" )
                 file = open(filename, 'w')
 
             file.close()
@@ -143,7 +144,7 @@ def do_the_map_thing(deviceName):
                         timeAtLocation = row[4]
                         locationType = row[7]
                         accuracy = row[9]
-                        weekday = findDay(dateFromFilename.replace("-"," "))
+                        weekday = self.findDay(dateFromFilename.replace("-"," "))
                         
                         data = [dateFromFilename, time, latitude, longitude, weekday, battery, inTransit, speed, timeAtLocation,locationType ,accuracy]
 
@@ -162,11 +163,11 @@ def do_the_map_thing(deviceName):
         else:
             print("I do not know how you managed this... I did at one point though ¯\_(ツ)_/¯")
 
-    def mapCreation(name):
+    def mapCreation(self,name):
         try:
             print("Map Creation Module Loaded!\nCreating HTML for...\n")
-            compiledFilename = f"{main_path}/map/compiled/{name}.csv"
-            outputHTML = f"{main_path}/map/{name}/"
+            compiledFilename = f"{self.main_path}/map/compiled/{name}.csv"
+            outputHTML = f"{self.main_path}/map/{name}/"
             #timeSpentAtHeatmap(compiledFilename,outputHTML,10)
             print("LocationTypeMap!")
             locationTypeMap(compiledFilename,outputHTML)
@@ -184,15 +185,21 @@ def do_the_map_thing(deviceName):
             print(f"An error occured, {e}")
             pass
 
-    def theSauce(device_name):
-        isExist = os.path.exists(f"{main_path}/map/{device_name}")
+    def theSauce(self,device_name):
+        isExist = os.path.exists(f"{self.main_path}/map/{device_name}")
         if not isExist:
-            os.mkdir(f"{main_path}/map/{device_name}")
+            os.mkdir(f"{self.main_path}/map/{device_name}")
 
-        downloadFiles(remote_logs_directory)
-        aggregate_data(localLogPath,device_name)
-        mapCreation(device_name)
+        self.downloadFiles(self.remote_logs_directory)
+        self.aggregate_data(self.localLogPath,device_name)
+        self.mapCreation(device_name)
 
-    theSauce(deviceName)
 
+    def createTodayPath(self, CSV_PATH, outputHTML):
+        final_log = self.downloadFiles(self.remote_logs_directory)
+
+        if final_log != None:
+            inputCSV = os.path.join(CSV_PATH,final_log)
+
+        lines_between_points(inputCSV,outputHTML)
 

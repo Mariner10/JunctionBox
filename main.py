@@ -21,7 +21,7 @@ import json
 import base64
 import ssl
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
-from mapCreation.logsDownloader import do_the_map_thing
+from mapCreation.map_toolkit import map_toolkit
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,6 +31,10 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+MAIN_PATH = str(os.path.join(os.path.dirname(os.path.abspath(__file__))))
+HTML_PATH = os.path.join( MAIN_PATH, 'HTML')
+JSON_PATH = os.path.join(MAIN_PATH, 'JSON')
+LOGS_PATH = os.path.join(MAIN_PATH,"mapCreation","logs")
 
 users_db = {
     os.getenv("USERNAME"): {
@@ -716,12 +720,33 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
     username = current_user.model_dump()['username']
     deviceName = users_db[username]["device_name"]
     if bool(int(redownload)):
-        do_the_map_thing(deviceName)
+        map_toolkit.theSauce(deviceName)
     else:
         pass
     try:
-        with open(f'mapCreation/map/{deviceName}/{mapModelName}.html', 'r') as file:  # r to open file in READ mode
+        with open(f'mapCreation/map/{deviceName}/{mapModelName}.html', 'r') as file: 
             html_as_string = file.read()
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        with open(f'HTML/denied.html', 'r') as file:
+            html_as_string = file.read()
+    return html_as_string
+
+@app.get("/personal/iLogger/today",response_class=HTMLResponse)
+async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
+    logRequest(request)
+    
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+
+    iLogger = map_toolkit(deviceName)
+
+    iLogger.createTodayPath(os.path.join(LOGS_PATH,deviceName),os.path.join(HTML_PATH,"today_path.html"))
+
+    try:
+        with open(f'{os.path.join(HTML_PATH,"today_path.html")}', 'r') as file:  
+            html_as_string = file.read()
+
     except Exception as e:
         ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
         with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
