@@ -275,7 +275,7 @@ async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_cur
 
 @app.get("/",response_class=HTMLResponse)
 async def get_login(request: apiRequest):
-    get_login(request)
+    await get_login(request)
     print(request)
     print(request.client)
 
