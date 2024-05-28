@@ -171,14 +171,14 @@ def logRequest(request: apiRequest):
         with open("JSON/requests.json", "r") as requestFile:
             requestDict = dict(json.load(requestFile))
 
-        headers = request.headers.__dict__
+        headers = request.headers
 
         now = datetime.now()
-        client_host = headers["x-forwarded-for"]
+        client_host = headers.get("x-forwarded-for")
         client_port = request.client.port
-        language = headers["accept-language"]
-        user_agent = headers["user-agent"]
-        scheme = headers["host"]
+        language = headers.get("accept-language")
+        user_agent = headers.get("user-agent")
+        scheme = headers.get("host")
         
 
         ntfy.send("Connection to API was made.", f"{client_host}:{client_port} accessed {scheme}", os.getenv("NTFY_ALERTS"),"min")
