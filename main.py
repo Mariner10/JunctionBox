@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union, List
 import ntfy
-from fastapi import Depends, FastAPI, HTTPException, status, Request, File, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile
+from starlette.requests import Request as apiRequest
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -25,6 +26,7 @@ from mapCreation.map_toolkit import map_toolkit
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 # openssl rand -hex 32
 SECRET_KEY = os.getenv('SECRET_KEY')
@@ -164,7 +166,7 @@ async def get_current_active_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def logRequest(request: Request):
+def logRequest(request: apiRequest):
     try:
         with open("JSON/requests.json", "r") as requestFile:
             requestDict = dict(json.load(requestFile))
@@ -262,7 +264,7 @@ def fileHasBeenUsed(name: str):
                 update_json_file(zipDict,"zipFiles")
 
 @app.get("/map", response_class=HTMLResponse)
-async def root(request: Request, urrent_user: Annotated[User, Depends(get_current_active_user)]):
+async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_current_active_user)]):
     logRequest(request)
     with open('HTML/ZoneMap.html', 'r') as file:  # r to open file in READ mode
         html_as_string = file.read()
@@ -270,7 +272,7 @@ async def root(request: Request, urrent_user: Annotated[User, Depends(get_curren
     return html_as_string
 
 @app.get("/",response_class=HTMLResponse)
-async def get_login(request: Request):
+async def get_login(request: apiRequest):
     print(f"{request.client.host}")
 
     with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
@@ -278,7 +280,7 @@ async def get_login(request: Request):
         return HTMLResponse(content=file.read(), status_code=200)
     
 @app.get("/protected", response_class=HTMLResponse)
-async def get_protected_page(request: Request):
+async def get_protected_page(request: apiRequest):
     headers = request.headers
     authorization: str = headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
@@ -305,7 +307,7 @@ async def heatbeat():
 
 @app.post("/token")
 async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], request: Request
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], request: apiRequest
 ) -> Token:
     logRequest(request)
     user = authenticate_user(users_db, form_data.username, form_data.password)
@@ -387,7 +389,7 @@ async def input_current_whereabouts(item: DeviceLocation):
     return [{"Status": "Success", "Latency": f"{time_difference_seconds}s"}]
 
 @app.get("/iLogger/return_data/")
-async def output_current_whereabouts(current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
+async def output_current_whereabouts(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     global most_recent_phone_data
     
 
@@ -555,7 +557,7 @@ async def switchPoll(switchName,truthState):
 
 
 @app.post("/file-storage/upload/{linkName}")
-def uploadFile(request: Request,current_user: Annotated[User, Depends(get_current_active_user)],linkName,files: List[UploadFile] = File(...)):
+def uploadFile(request: apiRequest,current_user: Annotated[User, Depends(get_current_active_user)],linkName,files: List[UploadFile] = File(...)):
 
     passHeader = request.headers.get('filePassword')
     for file in files:
@@ -575,7 +577,7 @@ def uploadFile(request: Request,current_user: Annotated[User, Depends(get_curren
     return {"message": f"Successfuly uploaded {[file.filename for file in files]} to {linkName}"}    
 
 @app.post("/CLI/file-storage/upload/{linkName}")
-async def CLIuploadFile(request: Request, linkName, file: UploadFile = File(...)):
+async def CLIuploadFile(request: apiRequest, linkName, file: UploadFile = File(...)):
     passHeader = request.headers.get('filepassword')  # string to set the zip password to
     uploaderHeader = request.headers.get('uploader')  # uploader username
     passwordHeader = request.headers.get('uploaderPassword')  # uploader password
@@ -698,7 +700,7 @@ async def deleteFile(current_user: Annotated[User, Depends(get_current_active_us
         return {"Status": "Failed", "Data": f"Could not delete file [ {linkName}.zip ] from server."}
 
 @app.get("/file-storage/download/{linkName}",response_class=FileResponse)
-async def sendFile(linkName,request: Request):
+async def sendFile(linkName,request: apiRequest):
     logRequest(request)
     linkName = str(linkName).split(".")[0]
     cleanup_zipFiles()
@@ -714,7 +716,7 @@ async def sendFile(linkName,request: Request):
         return {"Status": "Failed", "Data": f"Could not delete file [ {linkName}.zip ] from server: {e}"}
         
 @app.get("/dataview/iLogger/{mapModelName}/{redownload}",response_class=HTMLResponse)
-async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
+async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     print(f"{request.client.host}")
     
 
@@ -735,7 +737,7 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
     return html_as_string
 
 @app.get("/personal/iLogger/today",response_class=HTMLResponse)
-async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
+async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     print(f"{request.client.host}")
     
     username = current_user.model_dump()['username']
