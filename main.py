@@ -171,7 +171,7 @@ def logRequest(request: apiRequest):
         with open("JSON/requests.json", "r") as requestFile:
             requestDict = dict(json.load(requestFile))
 
-        headers = request.headers.items()
+        headers = request.headers.__dict__
 
         now = datetime.now()
         client_host = headers["x-forwarded-for"]
