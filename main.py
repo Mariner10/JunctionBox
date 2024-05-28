@@ -275,9 +275,8 @@ async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_cur
 
 @app.get("/",response_class=HTMLResponse)
 async def get_login(request: apiRequest):
-    await get_login(request)
-    print(request)
-    print(request.client)
+    print(request.headers.items())
+    
 
     with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
 
