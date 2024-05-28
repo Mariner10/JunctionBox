@@ -171,6 +171,8 @@ def logRequest(request: apiRequest):
         with open("JSON/requests.json", "r") as requestFile:
             requestDict = dict(json.load(requestFile))
 
+        print(request)
+        print(request.client)
 
         now = datetime.now()
         client_host = request.client.host
@@ -717,7 +719,6 @@ async def sendFile(linkName,request: apiRequest):
         
 @app.get("/dataview/iLogger/{mapModelName}/{redownload}",response_class=HTMLResponse)
 async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
-    print(f"{request.client.host}")
     
 
     
@@ -738,7 +739,6 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
 
 @app.get("/personal/iLogger/today",response_class=HTMLResponse)
 async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
-    print(f"{request.client.host}")
     
     username = current_user.model_dump()['username']
     deviceName = users_db[username]["device_name"]
