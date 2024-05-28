@@ -270,7 +270,8 @@ async def root(request: Request, urrent_user: Annotated[User, Depends(get_curren
     return html_as_string
 
 @app.get("/",response_class=HTMLResponse)
-async def get_login():
+async def get_login(request):
+    print(f"{request.client.host}")
 
     with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
 
@@ -713,8 +714,9 @@ async def sendFile(linkName,request: Request):
         return {"Status": "Failed", "Data": f"Could not delete file [ {linkName}.zip ] from server: {e}"}
         
 @app.get("/dataview/iLogger/{mapModelName}/{redownload}",response_class=HTMLResponse)
-async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
-    logRequest(request)
+async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request):
+    print(f"{request.client.host}")
+    
 
     
     username = current_user.model_dump()['username']
@@ -733,8 +735,8 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
     return html_as_string
 
 @app.get("/personal/iLogger/today",response_class=HTMLResponse)
-async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: Request):
-    logRequest(request)
+async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request):
+    print(f"{request.client.host}")
     
     username = current_user.model_dump()['username']
     deviceName = users_db[username]["device_name"]
@@ -752,3 +754,4 @@ async def todayView(current_user: Annotated[User, Depends(get_current_active_use
         with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
             html_as_string = file.read()
     return html_as_string
+
