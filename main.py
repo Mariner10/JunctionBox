@@ -171,22 +171,26 @@ def logRequest(request: apiRequest):
         with open("JSON/requests.json", "r") as requestFile:
             requestDict = dict(json.load(requestFile))
 
-        print(request)
-        print(request.client)
+        headers = request.headers.items()
 
         now = datetime.now()
-        client_host = request.client.host
+        client_host = headers["x-forwarded-for"]
         client_port = request.client.port
-        scheme = request.url
-        print(scheme)
+        language = headers["accept-language"]
+        user_agent = headers["user-agent"]
+        scheme = headers["host"]
+        
 
         ntfy.send("Connection to API was made.", f"{client_host}:{client_port} accessed {scheme}", os.getenv("NTFY_ALERTS"),"min")
         new_entry = {
             "HOST": client_host,
+            "AGENT": str(user_agent),
             "PORT":  client_port,
             "METHOD": str(scheme),
+            "LANGUAGE": str(language),
             "TIMESTAMP": now.strftime("%m/%d/%Y, %H:%M:%S")
         }
+        print(new_entry)
 
         requestDict[client_host] = new_entry
 
@@ -275,7 +279,7 @@ async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_cur
 
 @app.get("/",response_class=HTMLResponse)
 async def get_login(request: apiRequest):
-    print(request.headers.items())
+    logRequest(request)
     
 
     with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
