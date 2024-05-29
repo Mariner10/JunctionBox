@@ -279,13 +279,13 @@ async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_cur
 async def get_login(request: apiRequest):
     logRequest(request)
     
-
     with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
 
         return HTMLResponse(content=file.read(), status_code=200)
     
 @app.get("/protected", response_class=HTMLResponse)
 async def get_protected_page(request: apiRequest):
+    logRequest(request)
     headers = request.headers
     authorization: str = headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
@@ -307,7 +307,8 @@ async def get_protected_page(request: apiRequest):
 
 
 @app.get("/heartbeat")
-async def heatbeat():
+async def heatbeat(request: apiRequest):
+    logRequest(request)
     return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now(), '%m/%d/%Y, %H:%M:%S')}"}
 
 @app.post("/token")
@@ -722,7 +723,7 @@ async def sendFile(linkName,request: apiRequest):
         
 @app.get("/dataview/iLogger/{mapModelName}/{redownload}",response_class=HTMLResponse)
 async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
-    
+    logRequest(request)
 
     
     username = current_user.model_dump()['username']
@@ -742,7 +743,7 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
 
 @app.get("/personal/iLogger/today",response_class=HTMLResponse)
 async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
-    
+    logRequest(request)
     username = current_user.model_dump()['username']
     deviceName = users_db[username]["device_name"]
 
