@@ -175,17 +175,15 @@ def logRequest(request: apiRequest):
 
         now = datetime.now()
         client_host = headers.get("x-forwarded-for")
-        client_port = request.client.port
         language = headers.get("accept-language")
         user_agent = headers.get("user-agent")
         scheme = headers.get("host")
         
 
-        ntfy.send("Connection to API was made.", f"{client_host}:{client_port} accessed {scheme}", os.getenv("NTFY_ALERTS"),"min")
+        ntfy.send(f"{client_host} accessed API.", f"{user_agent} accessed {scheme}", os.getenv("NTFY_ALERTS"),"min")
         new_entry = {
             "HOST": client_host,
             "AGENT": str(user_agent),
-            "PORT":  client_port,
             "METHOD": str(scheme),
             "LANGUAGE": str(language),
             "TIMESTAMP": now.strftime("%m/%d/%Y, %H:%M:%S")
