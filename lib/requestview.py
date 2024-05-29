@@ -1,5 +1,5 @@
 import json
-import ntfy
+import lib.ntfy
 import os
 from dotenv import load_dotenv
 load_dotenv()
