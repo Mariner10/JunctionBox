@@ -2,6 +2,7 @@ import pandas as pd
 import folium
 from folium.plugins import MarkerCluster, HeatMap, HeatMapWithTime, TimestampedGeoJson, AntPath, PolyLineTextPath
 from datetime import datetime, timedelta
+from lib.colorLib import get_gradient_color
 
 zoom = 5
 
@@ -369,12 +370,30 @@ def lines_between_points(inputCSV, outputHTML, ):
     for i in range(len(df) - 1):
         start_point = (df.loc[i, 'Latitude'], df.loc[i, 'Longitude'])
         end_point = (df.loc[i + 1, 'Latitude'], df.loc[i + 1, 'Longitude'])
+        battery = df.loc[i, 'Battery Level (%)']
+        battery = round(float(battery))
+        battery_color = get_gradient_color("#7d0000", "#ffed21", "#21ff21", battery)
+        if battery <= 0:
+            battery_icon = "battery-low"
+        elif battery <= 20:
+            battery_icon = "battery-quarter"
+        elif battery <= 40:
+            battery_icon = "battery-half"
+        elif battery <= 65:
+            battery_icon = "battery-three-quarters"
+        elif battery <= 90:
+            battery_icon = "battery-charged"
+        else:
+            battery_icon = "battery-charging"
+
+
 
         if i == 0 :          # If first point
             marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
                                    popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%Y-%m-%d'))}\n 
-                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}""",
-                                   icon=folium.Icon(icon= 'star',  prefix= 'glyphicon', color='red'))
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}\n
+                                    {df.loc[i, 'Position Type']}\n{battery}%""",
+                                   icon=folium.Icon(icon= battery_icon,  prefix= 'glyphicon', color='red',icon_color=battery_color))
             print("bruh")
             mymap.add_child(marker)
 
