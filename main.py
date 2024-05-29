@@ -177,7 +177,7 @@ def logRequest(request: apiRequest):
         client_host = headers.get("x-forwarded-for")
         language = headers.get("accept-language")
         user_agent = headers.get("user-agent")
-        scheme = headers.get("host")
+        scheme = request.url
         
 
         ntfy.send(f"{client_host} accessed API.", f"{user_agent} accessed {scheme}", os.getenv("NTFY_ALERTS"),"min")
