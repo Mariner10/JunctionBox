@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union, List
-import ntfy
+import lib.ntfy as ntfy
+from lib.requestview import drawRequestView
 from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile
 from starlette.requests import Request as apiRequest
 from fastapi.responses import HTMLResponse, FileResponse
@@ -166,36 +167,43 @@ async def get_current_active_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def logRequest(request: apiRequest):
+def logRequest(request: apiRequest, send = 1):
+
+    with open("JSON/requests.json", "r") as requestFile:
+        requestDict = dict(json.load(requestFile))
+
+    headers = request.headers
+
+    now = datetime.now()
+    client_host = headers.get("x-forwarded-for")
+    language = headers.get("accept-language")
+    user_agent = headers.get("user-agent")
+    scheme = request.url
+
     try:
-        with open("JSON/requests.json", "r") as requestFile:
-            requestDict = dict(json.load(requestFile))
+        hits = requestDict[client_host]["HITS"]
+    except Exception:
+        hits = 0
+    
+    if send == 1:
+        ntfy.send(f"{client_host} accessed API.", f"{user_agent} accessed {scheme}, lifetime connections: {hits}.", os.getenv("NTFY_ALERTS"),"min")
 
-        headers = request.headers
+    new_entry = {
+        "HOST": client_host,
+        "HITS": hits,
+        "AGENT": str(user_agent),
+        "METHOD": str(scheme),
+        "LANGUAGE": str(language),
+        "LAST_TIMESTAMP": now.strftime("%m/%d/%Y, %H:%M:%S")
+    }
+    
 
-        now = datetime.now()
-        client_host = headers.get("x-forwarded-for")
-        language = headers.get("accept-language")
-        user_agent = headers.get("user-agent")
-        scheme = request.url
-        
 
-        ntfy.send(f"{client_host} accessed API.", f"{user_agent} accessed {scheme}", os.getenv("NTFY_ALERTS"),"min")
-        new_entry = {
-            "HOST": client_host,
-            "AGENT": str(user_agent),
-            "METHOD": str(scheme),
-            "LANGUAGE": str(language),
-            "TIMESTAMP": now.strftime("%m/%d/%Y, %H:%M:%S")
-        }
-        print(new_entry)
+    requestDict[client_host] = new_entry
 
-        requestDict[client_host] = new_entry
+    update_json_file(requestDict,"requests")
 
-        update_json_file(requestDict,"requests")
-
-    except Exception as e:
-        print("Failed to Log the Request: ",e)
+    
 
 def generate_feature_id(features):
     if not features:
@@ -277,7 +285,7 @@ async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_cur
 
 @app.get("/",response_class=HTMLResponse)
 async def get_login(request: apiRequest):
-    logRequest(request)
+    logRequest(request,send = 0)
     
     with open("HTML/login.html", "r") as file:  # Assuming your HTML file is named 'login.html'
 
@@ -289,6 +297,7 @@ async def get_protected_page(request: apiRequest):
     headers = request.headers
     authorization: str = headers.get("Authorization")
     if not authorization or not authorization.startswith("Bearer "):
+        ntfy.send("SOMEBODY TRIED TO ACCESS PROTECTED!", f"See: {headers.get('x-forwarded-for')} and {headers.get('user-agent')}", os.getenv("NTFY_ALERTS"))
         raise HTTPException(status_code=401, detail="Invalid or missing token")
     token = authorization.split(" ")[1]
 
@@ -741,7 +750,7 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
             html_as_string = file.read()
     return html_as_string
 
-@app.get("/personal/iLogger/today",response_class=HTMLResponse)
+@app.get("/personal/view/today",response_class=HTMLResponse)
 async def todayView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     logRequest(request)
     username = current_user.model_dump()['username']
@@ -761,3 +770,18 @@ async def todayView(current_user: Annotated[User, Depends(get_current_active_use
             html_as_string = file.read()
     return html_as_string
 
+@app.get("/personal/view/requests",response_class=HTMLResponse)
+async def requestsView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+
+    drawRequestView()
+
+    try:
+        with open(f'{os.path.join(HTML_PATH,"requests.html")}', 'r') as file:  
+            html_as_string = file.read()
+
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
+            html_as_string = file.read()
+    return html_as_string
