@@ -394,22 +394,23 @@ def lines_between_points(inputCSV, outputHTML, ):
                                    {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}\n
                                     {df.loc[i, 'Position Type']}\n{battery}%""",
                                    icon=folium.Icon(icon= battery_icon,  prefix= 'glyphicon', color='red',icon_color=battery_color))
-            print("bruh")
             mymap.add_child(marker)
 
         if not (i == len(df) - 2 - 2 and i == 0):   # If not the last point
             marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
                                    popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%Y-%m-%d'))}\n 
-                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}""",
-                                   icon=folium.Icon(icon= 'info-sign',  prefix= 'glyphicon', color='gray'))
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}\n
+                                    {df.loc[i, 'Position Type']}\n{battery}%""",
+                                   icon=folium.Icon(icon= battery_icon,  prefix= 'glyphicon', color='gray',icon_color=battery_color))
             
             mymap.add_child(marker)
             
         if i == len(df) - 2:   # If last point
             marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
                                    popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%Y-%m-%d'))}\n 
-                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}""",
-                                   icon=folium.Icon(icon= 'star',  prefix= 'glyphicon', color='darkred'))
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S %p'))}\n
+                                    {df.loc[i, 'Position Type']}\n{battery}%""",
+                                   icon=folium.Icon(icon= battery_icon,  prefix= 'glyphicon', color='darkred',icon_color=battery_color))
 
             mymap.add_child(marker)
         
