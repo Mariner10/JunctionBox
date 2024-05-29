@@ -379,7 +379,7 @@ def lines_between_points(inputCSV, outputHTML, ):
         if i == 0 :          # If first point
             marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
                                    popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%m-%d-%y'))}\n 
-                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S\n%p'))}\n
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S%p'))}\n
                                     {df.loc[i, 'Position Type']}\n{battery}%""",
                                    icon=folium.Icon(icon= "glyphicon-flash",  prefix= 'glyphicon', color='red',icon_color=battery_color))
             mymap.add_child(marker)
@@ -387,7 +387,7 @@ def lines_between_points(inputCSV, outputHTML, ):
         if not (i == len(df) - 2 - 2 and i == 0):   # If not the last point
             marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
                                    popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%m-%d-%y'))}\n 
-                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S\n%p'))}\n
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S%p'))}\n
                                     {df.loc[i, 'Position Type']}\n{battery}%""",
                                    icon=folium.Icon(icon= "glyphicon-flash",  prefix= 'glyphicon', color='gray',icon_color=battery_color))
             
@@ -396,7 +396,7 @@ def lines_between_points(inputCSV, outputHTML, ):
         if i == len(df) - 2:   # If last point
             marker = folium.Marker((df.loc[i, 'Latitude'], df.loc[i, 'Longitude']), 
                                    popup=f"""{str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%m-%d-%y'))}\n 
-                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S\n%p'))}\n
+                                   {str(datetime.fromtimestamp(float((df.loc[i, 'Time Object (EPOCH)']))).strftime('%I:%M:%S%p'))}\n
                                     {df.loc[i, 'Position Type']}\n{battery}%""",
                                    icon=folium.Icon(icon= "glyphicon-flash",  prefix= 'glyphicon', color='darkred',icon_color=battery_color))
 
