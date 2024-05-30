@@ -181,7 +181,7 @@ def logRequest(request: apiRequest, send = 1):
     scheme = request.url
 
     try:
-        hits = requestDict[client_host]["HITS"]
+        hits = int(requestDict[client_host]["HITS"]) + 1
     except Exception:
         hits = 0
     
