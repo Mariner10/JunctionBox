@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union, List
 import lib.ntfy as ntfy
-from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile, Form
 from starlette.requests import Request as apiRequest
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -21,10 +21,12 @@ import shutil
 import json
 import base64
 import ssl
+import glob
+import pandas as pd
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
 from mapCreation.map_toolkit import map_toolkit
 from lib.requestview import drawRequestView
-from lib.batteryview import generateBatteryView
+from batteryViewCreation.batteryview import generateBatteryView
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -275,6 +277,27 @@ def fileHasBeenUsed(name: str):
                 now = datetime.now()
                 zipDict[key]["Lifespan"] = now.strftime("%m/%d/%Y, %H:%M:%S")
                 update_json_file(zipDict,"zipFiles")
+
+def get_weeks(deviceName):
+
+    csv_files = glob.glob(os.path.join(LOGS_PATH,deviceName, '*.csv'))
+    df = pd.DataFrame()
+
+    for file in csv_files:
+        temp_df = pd.read_csv(file)
+        df = pd.concat([df, temp_df], ignore_index=True)
+
+    df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
+    start_date = df['Time'].min().floor('D')
+    end_date = df['Time'].max().ceil('D')
+
+    weeks = []
+    current_week = start_date
+    while current_week <= end_date:
+        weeks.append(current_week.strftime('%Y-%m-%d'))
+        current_week += timedelta(weeks=1)
+
+    return weeks
 
 @app.get("/map", response_class=HTMLResponse)
 async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_current_active_user)]):
@@ -798,7 +821,7 @@ async def flipswitchView(current_user: Annotated[User, Depends(get_current_activ
             html_as_string = file.read()
     return html_as_string
 
-@app.get("/personal/view/batteryTimeline",response_class=HTMLResponse)
+'''@app.get("/personal/view/batteryTimeline",response_class=HTMLResponse)
 async def batteryView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     logRequest(request)
 
@@ -818,4 +841,57 @@ async def batteryView(current_user: Annotated[User, Depends(get_current_active_u
         ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
         with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
             html_as_string = file.read()
-    return html_as_string
+    return html_as_string'''
+
+@app.post("/personal/view/batteryTimeline", response_class=HTMLResponse)
+async def batteryView(
+    current_user: Annotated[dict, Depends(get_current_active_user)],
+    week: Annotated[str, Form(...)]
+):
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+
+    iLogger = map_toolkit(deviceName)
+
+    iLogger.downloadFiles(os.path.join(os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY"),deviceName))
+
+    username = current_user.model_dump()['username']
+    deviceName = 'device_name'  # Fetch device name from your user database
+    generateBatteryView(os.path.join(LOGS_PATH,deviceName), os.path.join(HTML_PATH, f"battery_level_{week}.html"), week)
+
+    try:
+        with open(os.path.join(HTML_PATH, f"battery_level_{week}.html"), 'r') as file:  
+            html_as_string = file.read()
+    except Exception as e:
+        html_as_string = f"Error generating the graph: {e}"
+
+    return HTMLResponse(content=html_as_string)
+
+@app.get("/personal/view/batteryTimeline", response_class=HTMLResponse)
+async def batteryViewForm():
+
+    weeks = get_weeks("Yeeter")
+    return HTMLResponse(content=render_form(weeks))
+
+def render_form(weeks):
+    options = "\n".join([f'<option value="{week}">{week}</option>' for week in weeks])
+    form_html = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Battery Level Graphs</title>
+    </head>
+    <body>
+        <h1>Select a Week to Generate Battery Level Graph</h1>
+        <form method="POST" action="/personal/view/batteryTimeline">
+            <label for="week">Select Week:</label>
+            <select name="week" id="week">
+                {options}
+            </select>
+            <button type="submit">Generate Graph</button>
+        </form>
+    </body>
+    </html>
+    """
+    return form_html
