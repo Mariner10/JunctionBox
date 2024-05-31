@@ -91,5 +91,5 @@ def drawRequestView():
 
         return True
     except Exception as e:
-        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        lib.ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
         return False

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union, List
 import lib.ntfy as ntfy
-from lib.requestview import drawRequestView
 from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile
 from starlette.requests import Request as apiRequest
 from fastapi.responses import HTMLResponse, FileResponse
@@ -24,6 +23,8 @@ import base64
 import ssl
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
 from mapCreation.map_toolkit import map_toolkit
+from lib.requestview import drawRequestView
+from lib.batteryview import generateBatteryView
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -540,8 +541,6 @@ async def switch(current_user: Annotated[User, Depends(get_current_active_user)]
     stateDict[title]['state'] = flipSwitch_state
     update_json_file(stateDict,"flipSwitches")
 
-    for key in stateDict:
-        print(str(key) + ": " + str(stateDict[key]))
     return {"State": flipSwitch_state}
 
 
@@ -569,8 +568,6 @@ async def switchPoll(switchName,truthState):
 
         return {"Error": f"Timeout - {e}"}
    
-
-
 @app.post("/file-storage/upload/{linkName}")
 def uploadFile(request: apiRequest,current_user: Annotated[User, Depends(get_current_active_user)],linkName,files: List[UploadFile] = File(...)):
 
@@ -778,6 +775,43 @@ async def requestsView(current_user: Annotated[User, Depends(get_current_active_
 
     try:
         with open(f'{os.path.join(HTML_PATH,"requests.html")}', 'r') as file:  
+            html_as_string = file.read()
+
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
+            html_as_string = file.read()
+    return html_as_string
+
+@app.get("/personal/view/flipswitch",response_class=HTMLResponse)
+async def flipswitchView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+    
+    
+    try:
+        with open(f'{os.path.join(HTML_PATH,"flipswitches.html")}', 'r') as file:  
+            html_as_string = file.read()
+
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
+            html_as_string = file.read()
+    return html_as_string
+
+@app.get("/personal/view/batteryTimeline",response_class=HTMLResponse)
+async def batteryView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+
+    iLogger = map_toolkit(deviceName)
+
+    iLogger.downloadFiles(os.path.join(os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY"),deviceName))
+    generateBatteryView(os.path.join(LOGS_PATH,deviceName),os.path.join(HTML_PATH,"battery_level_plot.html"))
+
+    try:
+        with open(f'{os.path.join(HTML_PATH,"battery_level_plot.html")}', 'r') as file:  
             html_as_string = file.read()
 
     except Exception as e:
