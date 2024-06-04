@@ -1,41 +1,50 @@
-import pandas as pd
-import glob
-import plotly.express as px
 import os
-from dotenv import load_dotenv
+import glob
+import pandas as pd
+import plotly.express as px
 from datetime import datetime, timedelta
 
-load_dotenv()
-
 def generateBatteryView(CSV_PATH, HTML_PATH, weekOf):
+
     csv_files = glob.glob(os.path.join(CSV_PATH, '*.csv'))
 
-    # Initialize an empty DataFrame
-    df = pd.DataFrame()
+    data_frames = []
 
-    # Read and concatenate all CSV files
     for file in csv_files:
         temp_df = pd.read_csv(file)
-        df = pd.concat([df, temp_df], ignore_index=True)
+        data_frames.append(temp_df)
 
-    # Convert EPOCH time to datetime
+    df = pd.concat(data_frames, ignore_index=True)
+
     df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
 
-    # Set the datetime as the index
     df.set_index('Time', inplace=True)
+    df.sort_index(inplace=True)
+    df = df[~df.index.duplicated(keep='first')]
 
-    # Filter data for the specified week
-    start_date = datetime.strptime(weekOf, '%Y-%m-%d')
+    start_date = datetime.strptime(weekOf, "%m-%d-%Y")
     end_date = start_date + timedelta(days=7)
-    df_week = df[start_date:end_date]
 
-    # Resample to minute-by-minute intervals, filling gaps with NaN
+    nearest_start = df.index.asof(start_date)
+    nearest_end = df.index.asof(end_date)
+
+    if pd.isna(nearest_start) or pd.isna(nearest_end):
+        print(f"No data available for the specified week {start_date} to {end_date}.")
+        return
+
+    df_week = df.loc[nearest_start:nearest_end]
+
+
+    if df_week.empty:
+        print("No data available for the specified week.")
+        return
+
     df_resampled = df_week['Battery Level (%)'].resample('T').mean()
 
-    # Create the plot
-    fig = px.line(df_resampled, title=f'Battery Level Minute-by-Minute ({weekOf} to {end_date.strftime("%Y-%m-%d")})', labels={'index': 'Time', 'value': 'Battery Level (%)'})
+    fig = px.line(df_resampled, title=f'Battery Level Minute-by-Minute ({weekOf} to {end_date.strftime("%m-%d-%Y")})',
+                  labels={'index': 'Time', 'value': 'Battery Level (%)'})
 
-    # Update layout to improve readability
+
     fig.update_layout(
         xaxis_title='Time',
         yaxis_title='Battery Level (%)',

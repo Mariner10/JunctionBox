@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union, List
 import lib.ntfy as ntfy
-from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile, Form
+from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile, Form, Response
 from starlette.requests import Request as apiRequest
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -42,16 +42,7 @@ HTML_PATH = os.path.join( MAIN_PATH, 'HTML')
 JSON_PATH = os.path.join(MAIN_PATH, 'JSON')
 LOGS_PATH = os.path.join(MAIN_PATH,"mapCreation","logs")
 
-users_db = {
-    os.getenv("USERNAME"): {
-        "username": os.getenv("USERNAME"),
-        "full_name": os.getenv("FULL_NAME"),
-        "email": os.getenv("EMAIL"),
-        "hashed_password": os.getenv("API_KEY"),
-        "disabled": False,
-        "device_name": os.getenv("DEVICE_NAME")
-    }
-}
+from userdatabase import users_db
 
 CLI_users_db = {
     os.getenv("USERNAME"): {
@@ -128,9 +119,10 @@ def get_user(db, username: str):
 def authenticate_user(db, username: str, password: str):
     user = get_user(db, username)
     if not user:
+        ntfy.send(f"Someone tried a username [ {username} ] on API!", f"If this was not you, take action! [ {username} , {password}]", os.getenv("NTFY_ALERTS"))
         return False
     if not verify_password(password, user.hashed_password):
-        ntfy.send("Someone tried to authenticate API!", "If this was not you, take action!", os.getenv("NTFY_ALERTS"))
+        ntfy.send("Someone tried to authenticate API!", f"User, [ {username} ]: If this was not you, take action!", os.getenv("NTFY_ALERTS"))
         return False
     return user
 
@@ -206,7 +198,6 @@ def logRequest(request: apiRequest, send = 1):
 
     update_json_file(requestDict,"requests")
 
-    
 
 def generate_feature_id(features):
     if not features:
@@ -279,8 +270,7 @@ def fileHasBeenUsed(name: str):
                 update_json_file(zipDict,"zipFiles")
 
 def get_weeks(deviceName):
-
-    csv_files = glob.glob(os.path.join(LOGS_PATH,deviceName, '*.csv'))
+    csv_files = glob.glob(os.path.join(LOGS_PATH, deviceName, '*.csv'))
     df = pd.DataFrame()
 
     for file in csv_files:
@@ -288,16 +278,23 @@ def get_weeks(deviceName):
         df = pd.concat([df, temp_df], ignore_index=True)
 
     df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
-    start_date = df['Time'].min().floor('D')
-    end_date = df['Time'].max().ceil('D')
+    start_date = df['Time'].min()
+    end_date = df['Time'].max()
+
+    # Adjust start_date to the previous Sunday
+    start_date -= timedelta(days=start_date.weekday() + 1 if start_date.weekday() != 6 else 0)
+    
+    # Adjust end_date to the next Saturday
+    end_date += timedelta(days=(5 - end_date.weekday() + 1) if end_date.weekday() != 5 else 0)
 
     weeks = []
     current_week = start_date
     while current_week <= end_date:
-        weeks.append(current_week.strftime('%Y-%m-%d'))
+        weeks.append(current_week.strftime('%m-%d-%Y'))
         current_week += timedelta(weeks=1)
 
     return weeks
+
 
 @app.get("/map", response_class=HTMLResponse)
 async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_current_active_user)]):
@@ -368,6 +365,15 @@ async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     return current_user
+
+@app.get("/users/me/deviceName")
+async def read_users_me(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+
+    return {"deviceName": deviceName}
 
 
 most_recent_phone_data = {}
@@ -843,36 +849,62 @@ async def batteryView(current_user: Annotated[User, Depends(get_current_active_u
             html_as_string = file.read()
     return html_as_string'''
 
-@app.post("/personal/view/batteryTimeline", response_class=HTMLResponse)
-async def batteryView(
-    current_user: Annotated[dict, Depends(get_current_active_user)],
-    week: Annotated[str, Form(...)]
-):
-    username = current_user.model_dump()['username']
-    deviceName = users_db[username]["device_name"]
 
+@app.get("/function/batteryTimeline/weeks/{deviceName}")
+async def getWeeksEndpoint(deviceName):
+    try:
+        weeks = get_weeks(deviceName)
+        print(weeks)
+        return weeks
+    except Exception as e:
+        Response.status_code = 404
+        return {"Status": "Failed", "Info": f"Device -[ {deviceName} ]- not found."}
+
+@app.get("/personal/view/batteryTimeline/{week}", response_class=HTMLResponse)
+async def batteryView(
+    week
+):
+    '''username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]'''
+    deviceName = "Yeeter"
     iLogger = map_toolkit(deviceName)
+
 
     iLogger.downloadFiles(os.path.join(os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY"),deviceName))
 
-    username = current_user.model_dump()['username']
-    deviceName = 'device_name'  # Fetch device name from your user database
-    generateBatteryView(os.path.join(LOGS_PATH,deviceName), os.path.join(HTML_PATH, f"battery_level_{week}.html"), week)
+    print(get_weeks(deviceName))
+
+    generateBatteryView(os.path.join(LOGS_PATH,deviceName), os.path.join("batteryViewCreation/HTML", f"battery_level_{week}.html"), week)
 
     try:
-        with open(os.path.join(HTML_PATH, f"battery_level_{week}.html"), 'r') as file:  
+        with open(os.path.join("batteryViewCreation/HTML", f"battery_level_{week}.html"), 'r') as file:  
             html_as_string = file.read()
     except Exception as e:
         html_as_string = f"Error generating the graph: {e}"
 
     return HTMLResponse(content=html_as_string)
 
-@app.get("/personal/view/batteryTimeline", response_class=HTMLResponse)
-async def batteryViewForm():
+@app.get("/personal/view/batteryTimeline", response_class= HTMLResponse)
+async def batteryChooserView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+    headers = request.headers
+    authorization: str = headers.get("Authorization")
+    
+    token = authorization.split(" ")[1]
 
-    weeks = get_weeks("Yeeter")
-    return HTMLResponse(content=render_form(weeks))
 
+    if (token):
+        try:
+            with open("HTML/battery_level_week_chooser.html", "r") as file:
+                return HTMLResponse(content=file.read(), status_code=200)
+        except FileNotFoundError:
+            raise HTTPException(status_code=500, detail="HTML file not found")
+    else:
+        with open("HTML/denied.html", "r") as file:
+            return HTMLResponse(content=file.read(), status_code=401)
+
+
+'''
 def render_form(weeks):
     options = "\n".join([f'<option value="{week}">{week}</option>' for week in weeks])
     form_html = f"""
@@ -892,6 +924,52 @@ def render_form(weeks):
             <button type="submit">Generate Graph</button>
         </form>
     </body>
+    """ + """
+    <script>
+        document.querySelector('form[action="/personal/view/batteryTimeline"]').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent the default form submission
+    
+            const token = sessionStorage.getItem('access_token');
+            if (!token) {
+                alert('You must log in first!');
+                return;
+            }
+    
+            const form = event.target;
+            const formData = new FormData(form);
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = "Loading...";
+    
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+    
+                const contentType = response.headers.get("content-type");
+                if (response.ok) {
+                    if (contentType && contentType.indexOf("application/json") !== -1) {
+                        const data = await response.json();
+                        responseDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    } else if (contentType && contentType.indexOf("text/html") !== -1) {
+                        const data = await response.text();
+                        responseDiv.innerHTML = `<iframe srcdoc="${data.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"></iframe>`;
+                    } else {
+                        responseDiv.innerHTML = "Unsupported content type";
+                    }
+                } else {
+                    const error = await response.json();
+                    responseDiv.innerHTML = `Error: ${error.detail}`;
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `Network Error: ${error.message}`;
+            }
+        });
+    </script>
+    
     </html>
     """
-    return form_html
+    return form_html'''
