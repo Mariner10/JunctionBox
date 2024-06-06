@@ -924,7 +924,7 @@ async def deviceControlUpdate(current_user: Annotated[User, Depends(get_current_
 
 @app.get("/function/deviceControl/command/{commandType}/{commandNumber}")
 async def deviceControlUpdate(current_user: Annotated[User, Depends(get_current_active_user)],commandType,commandNumber,request: apiRequest):
-    logRequest(request)
+    logRequest(request,False)
     if os.path.exists("JSON/deviceControl.json"):
         with open("JSON/deviceControl.json", "r") as file:
             stateDict = json.load(file)
