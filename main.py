@@ -938,9 +938,20 @@ async def deviceControlUpdate(current_user: Annotated[User, Depends(get_current_
 
         return command
             
-  
-    
+@app.get("/personal/view/deviceControl", response_class= HTMLResponse)
+async def batteryChooserView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
 
+    
+    try:
+        with open(f'{os.path.join(HTML_PATH,"iosControl.html")}', 'r') as file:  
+            html_as_string = file.read()
+
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
+            html_as_string = file.read()
+    return html_as_string
     
 
 '''
