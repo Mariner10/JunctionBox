@@ -162,7 +162,7 @@ async def get_current_active_user(
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
 
-def logRequest(request: apiRequest, send = 1):
+def logRequest(request: apiRequest, send = True):
 
     with open("JSON/requests.json", "r") as requestFile:
         requestDict = dict(json.load(requestFile))
@@ -180,7 +180,7 @@ def logRequest(request: apiRequest, send = 1):
     except Exception:
         hits = 0
     
-    if send == 1:
+    if send:
         ntfy.send(f"{client_host} accessed API.", f"{user_agent} accessed {scheme}, lifetime connections: {hits}.", os.getenv("NTFY_ALERTS"),"min")
 
     new_entry = {
@@ -904,8 +904,8 @@ async def batteryChooserView(current_user: Annotated[User, Depends(get_current_a
             return HTMLResponse(content=file.read(), status_code=401)
 
 @app.get("/function/deviceControl/update")
-async def deviceControlUpdate(request: apiRequest):
-    logRequest(request)
+async def deviceControlUpdate(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request,0)
     try:
         if os.path.exists("JSON/deviceUpdate.json"):
             with open("JSON/deviceUpdate.json", "r") as file:
@@ -923,8 +923,8 @@ async def deviceControlUpdate(request: apiRequest):
         return {"Error": f"Timeout - {e}"}
 
 @app.get("/function/deviceControl/command/{commandType}/{commandNumber}")
-async def deviceControlUpdate(commandType,commandNumber,request: apiRequest):
-    
+async def deviceControlUpdate(current_user: Annotated[User, Depends(get_current_active_user)],commandType,commandNumber,request: apiRequest):
+    logRequest(request)
     if os.path.exists("JSON/deviceControl.json"):
         with open("JSON/deviceControl.json", "r") as file:
             stateDict = json.load(file)
