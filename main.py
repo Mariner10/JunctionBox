@@ -903,6 +903,45 @@ async def batteryChooserView(current_user: Annotated[User, Depends(get_current_a
         with open("HTML/denied.html", "r") as file:
             return HTMLResponse(content=file.read(), status_code=401)
 
+@app.get("/function/deviceControl/update")
+async def deviceControlUpdate(request: apiRequest):
+    logRequest(request)
+    try:
+        if os.path.exists("JSON/deviceUpdate.json"):
+            with open("JSON/deviceUpdate.json", "r") as file:
+                stateDict = json.load(file)
+
+            while bool(stateDict["update"]) != True:
+                with open("JSON/deviceUpdate.json", "r") as file:
+                    stateDict = json.load(file)
+                await asyncio.sleep(1)
+            
+            return stateDict["command"]
+        
+    except Exception as e:
+
+        return {"Error": f"Timeout - {e}"}
+
+@app.get("/function/deviceControl/command/{commandType}/{commandNumber}")
+async def deviceControlUpdate(commandType,commandNumber,request: apiRequest):
+    
+    if os.path.exists("JSON/deviceControl.json"):
+        with open("JSON/deviceControl.json", "r") as file:
+            stateDict = json.load(file)
+
+        command = stateDict[commandType][int(commandNumber)]
+
+        
+        update_json_file({"update": True, "command": command},"deviceUpdate")
+        await asyncio.sleep(3)
+        update_json_file({"update": False, "command": "libactivator.system.nothing"},"deviceUpdate")
+
+        return command
+            
+  
+    
+
+    
 
 '''
 def render_form(weeks):
