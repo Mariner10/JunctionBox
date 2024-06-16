@@ -102,7 +102,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-app = FastAPI(ssl_keyfile=os.getenv("SSL_KEYFILE"), ssl_certfile=os.getenv("SSL_CERT"))
+app = FastAPI(ssl_keyfile=os.getenv("SSL_KEYFILE"), ssl_certfile=os.getenv("SSL_CERT"),docs_url=None, redoc_url=None)
 
 
 def verify_password(plain_password, hashed_password):
