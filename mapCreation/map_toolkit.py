@@ -143,8 +143,9 @@ class map_toolkit():
                         timeAtLocation = row[4]
                         locationType = row[7]
                         accuracy = row[9]
-                        weekday = self.findDay((dateFromFilename.replace("-"," ")))
-                        
+                        year,month,day = dateFromFilename.split("-")
+                        weekday = self.findDay(year,month,day)
+                    
                         data = [dateFromFilename, time, latitude, longitude, weekday, battery, inTransit, speed, timeAtLocation,locationType ,accuracy]
 
                         with open(new_File, 'a') as file:
