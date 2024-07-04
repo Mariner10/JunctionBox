@@ -144,7 +144,7 @@ class map_toolkit():
                         locationType = row[7]
                         accuracy = row[9]
                         year,month,day = dateFromFilename.split("-")
-                        weekday = self.findDay(year,month,day)
+                        weekday = self.findDay(int(year),int(month),int(day))
                     
                         data = [dateFromFilename, time, latitude, longitude, weekday, battery, inTransit, speed, timeAtLocation,locationType ,accuracy]
 
