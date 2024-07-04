@@ -145,8 +145,8 @@ class map_toolkit():
                         locationType = row[7]
                         accuracy = row[9]
                         print(dateFromFilename.replace("-"," "))
-                        print(self.findDay(dateFromFilename.replace("-"," ")))
-                        weekday = self.findDay(dateFromFilename.replace("-"," "))
+                        print((dateFromFilename.replace("-"," "))[0])
+                        weekday = self.findDay((dateFromFilename.replace("-"," "))[0])
                         
                         data = [dateFromFilename, time, latitude, longitude, weekday, battery, inTransit, speed, timeAtLocation,locationType ,accuracy]
 
