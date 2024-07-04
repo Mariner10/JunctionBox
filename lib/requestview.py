@@ -4,11 +4,8 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-
 def drawRequestView():
-
     try:
-
         with open("JSON/requests.json", "r") as requests_file:
             requestDict = json.load(requests_file)
 
@@ -75,9 +72,12 @@ def drawRequestView():
         </html>
         """
 
+        sorted_requests = sorted(requestDict.items(), key=lambda x: x[1].get("HITS", 0), reverse=True)
+
         content = ""
-        for ip, details in requestDict.items():
-            content += f'<button class="button" onclick="toggleDetails(\'{ip}\')">{ip}</button>'
+        for ip, details in sorted_requests:
+            hits = details.get("HITS", 0)
+            content += f'<button class="button" onclick="toggleDetails(\'{ip}\')">{ip} | {hits}</button>'
             details_html = "<ul>"
             for key, value in details.items():
                 details_html += f"<li><strong>{key}:</strong> {value}</li>"

@@ -297,7 +297,7 @@ def get_weeks(deviceName):
 
 
 @app.get("/map", response_class=HTMLResponse)
-async def root(request: apiRequest, urrent_user: Annotated[User, Depends(get_current_active_user)]):
+async def root(request: apiRequest, current_user: Annotated[User, Depends(get_current_active_user)]):
     logRequest(request)
     with open('HTML/ZoneMap.html', 'r') as file:  # r to open file in READ mode
         html_as_string = file.read()
@@ -340,7 +340,40 @@ async def get_protected_page(request: apiRequest):
 async def heatbeat(request: apiRequest):
     logRequest(request)
     return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now(), '%m/%d/%Y, %H:%M:%S')}"}
+'''
+@app.get("/twoFA_enact")
+async def twoFA_enact(request: apiRequest,current_user: Annotated[User, Depends(get_current_active_user)]):
+    logRequest(request)
+    headers = request.headers
+    authorization: str = headers.get("Authorization")
+    if not authorization or not authorization.startswith("Bearer "):
+        ntfy.send("SOMEBODY TRIED TO ACCESS twoFA_enact!", f"See: {headers.get('x-forwarded-for')} and {headers.get('user-agent')}", os.getenv("NTFY_ALERTS"))
+        raise HTTPException(status_code=401, detail="Invalid or missing token")
+    
 
+
+    return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now(), '%m/%d/%Y, %H:%M:%S')}"}
+
+@app.get("/twoFA")
+async def twoFA(request: apiRequest):
+    logRequest(request)
+    ntfy.twoFactor("goonCave2FAAUTH","Auth Test",
+          [{
+              "action": "http",
+              "label": "Auth",
+              "url": "https://carterbeaudoin2.ddns.net/twoFA_enact",
+              "method": "GET",
+              "headers": {
+                'username': "",
+                'password': os.getenv("API_USER_PASS")
+              },
+              "body": "{\"action\": \"close\"}"
+            }
+            ])
+    # Sit here and make new fuction that waits 15 seconds for a 2FA file to change or something?
+    ntfy.send("Authenticating!!", f"YAYYYYYY", os.getenv("NTFY_ALERTS"))
+    return {"Status": "Success", "Time": f"{datetime.strftime(datetime.now(), '%m/%d/%Y, %H:%M:%S')}"}
+'''
 @app.post("/token")
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], request: apiRequest

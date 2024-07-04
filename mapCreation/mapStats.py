@@ -439,10 +439,3 @@ def viewTodayPath(inputCSV,outputHTML):
     # Step 4: Save the map to an HTML file
     mymap.save(outputHTML)
 
-
-        
-
-        
-
-
-
