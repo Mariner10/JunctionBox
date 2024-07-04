@@ -185,14 +185,14 @@ class map_toolkit():
             print(f"An error occured, {e}")
             pass
 
-    def theSauce(self,device_name):
-        isExist = os.path.exists(f"{self.main_path}/map/{device_name}")
+    def theSauce(self):
+        isExist = os.path.exists(f"{self.main_path}/map/{self.deviceName}")
         if not isExist:
-            os.mkdir(f"{self.main_path}/map/{device_name}")
+            os.mkdir(f"{self.main_path}/map/{self.deviceName}")
 
         self.downloadFiles(self.remote_logs_directory)
-        self.aggregate_data(self.localLogPath,device_name)
-        self.mapCreation(device_name)
+        self.aggregate_data(self.localLogPath,self.deviceName)
+        self.mapCreation(self.deviceName)
 
 
     def createTodayPath(self, CSV_PATH, outputHTML):

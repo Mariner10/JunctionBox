@@ -796,8 +796,8 @@ async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depe
     if bool(int(redownload)):
         username = current_user.model_dump()['username']
         deviceName = users_db[username]["device_name"]
-        mpToolkit = map_toolkit()
-        mpToolkit.theSauce(deviceName)
+        mpToolkit = map_toolkit(deviceName)
+        mpToolkit.theSauce()
     else:
         pass
     try:
