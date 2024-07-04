@@ -19,8 +19,7 @@ class map_toolkit():
 
 
 
-    def findDay(date):
-        year,month,day = (int(i) for i in date.split(' '))    
+    def findDay(self,year,month,day):
         dayNumber = calendar.weekday(year, month, day)
         
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday","Sunday"]
@@ -144,9 +143,7 @@ class map_toolkit():
                         timeAtLocation = row[4]
                         locationType = row[7]
                         accuracy = row[9]
-                        print(dateFromFilename.replace("-"," "))
-                        print((dateFromFilename.replace("-"," "))[0])
-                        weekday = self.findDay((dateFromFilename.replace("-"," "))[0])
+                        weekday = self.findDay((dateFromFilename.replace("-"," ")))
                         
                         data = [dateFromFilename, time, latitude, longitude, weekday, battery, inTransit, speed, timeAtLocation,locationType ,accuracy]
 
