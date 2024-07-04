@@ -793,11 +793,10 @@ async def sendFile(linkName,request: apiRequest):
 async def mapCreation(mapModelName,redownload,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     logRequest(request)
 
-    
-    username = current_user.model_dump()['username']
-    deviceName = users_db[username]["device_name"]
     if bool(int(redownload)):
-        map_toolkit.theSauce(deviceName)
+        username = current_user.model_dump()['username']
+        deviceName = users_db[username]["device_name"]
+        map_toolkit.theSauce(device_name=deviceName)
     else:
         pass
     try:
