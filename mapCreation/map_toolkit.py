@@ -5,6 +5,7 @@ import click
 import calendar
 from .mapStats import *
 import csv
+import glob
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -202,4 +203,91 @@ class map_toolkit():
             inputCSV = os.path.join(CSV_PATH,final_log)
 
         lines_between_points(inputCSV,outputHTML)
+
+
+    def createDayPath(self, CSV_PATH, HTML_PATH, dayOf):
+        if not os.path.exists(HTML_PATH):
+            csv_files = glob.glob(os.path.join(CSV_PATH, '*.csv'))
+
+            data_frames = []
+
+            for file in csv_files:
+                temp_df = pd.read_csv(file)
+                data_frames.append(temp_df)
+
+            df = pd.concat(data_frames, ignore_index=True)
+
+            df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
+
+            df.set_index('Time', inplace=True)
+            df.sort_index(inplace=True)
+            df = df[~df.index.duplicated(keep='first')]
+
+            start_date = datetime.strptime(dayOf, "%Y-%m-%d")
+            end_date = start_date + timedelta(days=1)
+
+            nearest_start = df.index.asof(start_date)
+            nearest_end = df.index.asof(end_date)
+
+            if pd.isna(nearest_start) or pd.isna(nearest_end):
+                print(f"No data available for the specified day {start_date}.")
+                return "<p>No data available for the specified day.</p>"
+
+            df_day = df.loc[nearest_start:nearest_end]
+
+            if df_day.empty:
+                print("No data available for the specified day.")
+                return "<p>No data available for the specified day.</p>"
+
+            map_center = [df['Latitude'].mean(), df['Longitude'].mean()]
+            mymap = folium.Map(location=map_center)
+
+            sw = df[['Latitude', 'Longitude']].min().values.tolist()
+            ne = df[['Latitude', 'Longitude']].max().values.tolist()
+
+            mymap.fit_bounds([sw, ne])
+
+            for i in range(len(df_day) - 1):
+                start_point = (df_day.iloc[i]['Latitude'], df_day.iloc[i]['Longitude'])
+                end_point = (df_day.iloc[i + 1]['Latitude'], df_day.iloc[i + 1]['Longitude'])
+                battery = df_day.iloc[i]['Battery Level (%)']
+                battery = round(float(battery))
+                battery_color = get_gradient_color("#7d0000", "#ffed21", "#21ff21", battery)
+
+                if i == 0:  # If first point
+                    marker = folium.Marker(start_point, 
+                                        popup=f"""{str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%m-%d-%y'))}\n
+                                        {str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%I:%M:%S%p'))}\n
+                                        {df_day.iloc[i]['Position Type']}\n{battery}%""",
+                                        icon=folium.Icon(icon="glyphicon-flash", prefix='glyphicon', color='red', icon_color=battery_color))
+                    mymap.add_child(marker)
+
+                if not (i == len(df_day) - 2 and i == 0):  # If not the last point
+                    marker = folium.Marker(start_point, 
+                                        popup=f"""{str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%m-%d-%y'))}\n
+                                        {str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%I:%M:%S%p'))}\n
+                                        {df_day.iloc[i]['Position Type']}\n{battery}%""",
+                                        icon=folium.Icon(icon="glyphicon-flash", prefix='glyphicon', color='gray', icon_color=battery_color))
+                    mymap.add_child(marker)
+
+                if i == len(df_day) - 2:  # If last point
+                    marker = folium.Marker(start_point, 
+                                        popup=f"""{str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%m-%d-%y'))}\n
+                                        {str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%I:%M:%S%p'))}\n
+                                        {df_day.iloc[i]['Position Type']}\n{battery}%""",
+                                        icon=folium.Icon(icon="glyphicon-flash", prefix='glyphicon', color='darkred', icon_color=battery_color))
+                    mymap.add_child(marker)
+
+                # Create a PolyLine with direction
+                polyline = folium.PolyLine(locations=[start_point, end_point], color='red', weight=2)
+                mymap.add_child(polyline)
+
+                # Add arrowheads to the PolyLine
+                arrow_text = PolyLineTextPath(polyline, '\u25BA', repeat=True, offset=7, attributes={'font-size': '18', 'fill': 'black'})
+                mymap.add_child(arrow_text)
+
+            # Save the map to an HTML file
+            mymap.save(HTML_PATH)
+
+        
 

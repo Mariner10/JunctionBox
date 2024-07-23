@@ -4,51 +4,55 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
 
-def generateBatteryView(CSV_PATH, HTML_PATH, weekOf):
+def generateBatteryDayView(CSV_PATH, HTML_PATH, dayOf):
 
-    csv_files = glob.glob(os.path.join(CSV_PATH, '*.csv'))
+    if not os.path.exists(HTML_PATH):
 
-    data_frames = []
+        csv_files = glob.glob(os.path.join(CSV_PATH, '*.csv'))
 
-    for file in csv_files:
-        temp_df = pd.read_csv(file)
-        data_frames.append(temp_df)
+        data_frames = []
 
-    df = pd.concat(data_frames, ignore_index=True)
+        for file in csv_files:
+            temp_df = pd.read_csv(file)
+            data_frames.append(temp_df)
 
-    df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
+        df = pd.concat(data_frames, ignore_index=True)
 
-    df.set_index('Time', inplace=True)
-    df.sort_index(inplace=True)
-    df = df[~df.index.duplicated(keep='first')]
+        df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
 
-    start_date = datetime.strptime(weekOf, "%m-%d-%Y")
-    end_date = start_date + timedelta(days=7)
+        df.set_index('Time', inplace=True)
+        df.sort_index(inplace=True)
+        df = df[~df.index.duplicated(keep='first')]
 
-    nearest_start = df.index.asof(start_date)
-    nearest_end = df.index.asof(end_date)
+        start_date = datetime.strptime(dayOf, "%Y-%m-%d")
+        end_date = start_date + timedelta(days=1)
 
-    if pd.isna(nearest_start) or pd.isna(nearest_end):
-        print(f"No data available for the specified week {start_date} to {end_date}.")
-        return
+        nearest_start = df.index.asof(start_date)
+        nearest_end = df.index.asof(end_date)
 
-    df_week = df.loc[nearest_start:nearest_end]
+        if pd.isna(nearest_start) or pd.isna(nearest_end):
+            print(f"No data available for the specified day {start_date}.")
+            return "<p>No data available for the specified day.</p>"
 
+        df_day = df.loc[nearest_start:nearest_end]
 
-    if df_week.empty:
-        print("No data available for the specified week.")
-        return
+        if df_day.empty:
+            print("No data available for the specified day.")
+            return "<p>No data available for the specified day.</p>"
 
-    df_resampled = df_week['Battery Level (%)'].resample('T').mean()
+        df_resampled = df_day['Battery Level (%)'].resample('T').mean()
 
-    fig = px.line(df_resampled, title=f'Battery Level Minute-by-Minute ({weekOf} to {end_date.strftime("%m-%d-%Y")})',
-                  labels={'index': 'Time', 'value': 'Battery Level (%)'})
+        fig = px.line(df_resampled, title=f'Battery Level Minute-by-Minute ({dayOf})',
+                    labels={'index': 'Time', 'value': 'Battery Level (%)'})
 
+        fig.update_layout(
+            xaxis_title='Time',
+            yaxis_title='Battery Level (%)',
+            xaxis_rangeslider_visible=True
+        )
 
-    fig.update_layout(
-        xaxis_title='Time',
-        yaxis_title='Battery Level (%)',
-        xaxis_rangeslider_visible=True
-    )
+        fig.write_html(HTML_PATH,include_plotlyjs='cdn')
+    
+    else:
+        pass
 
-    fig.write_html(HTML_PATH, include_plotlyjs='cdn')

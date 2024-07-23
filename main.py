@@ -4,6 +4,7 @@ import lib.ntfy as ntfy
 from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile, Form, Response
 from starlette.requests import Request as apiRequest
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -21,12 +22,13 @@ import shutil
 import json
 import base64
 import ssl
+import re
 import glob
 import pandas as pd
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
 from mapCreation.map_toolkit import map_toolkit
 from lib.requestview import drawRequestView
-from batteryViewCreation.batteryview import generateBatteryView
+from batteryViewCreation.batteryview import generateBatteryDayView
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -101,6 +103,8 @@ class UserInDB(User):
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+templates = Jinja2Templates(directory=os.path.join("HTML","templates"))
 
 app = FastAPI(ssl_keyfile=os.getenv("SSL_KEYFILE"), ssl_certfile=os.getenv("SSL_CERT"),docs_url=None, redoc_url=None)
 
@@ -883,35 +887,37 @@ async def batteryView(current_user: Annotated[User, Depends(get_current_active_u
             html_as_string = file.read()
     return html_as_string'''
 
-
-@app.get("/function/batteryTimeline/weeks/{deviceName}")
-async def getWeeksEndpoint(deviceName):
-    try:
-        weeks = get_weeks(deviceName)
-        print(weeks)
-        return weeks
-    except Exception as e:
-        Response.status_code = 404
-        return {"Status": "Failed", "Info": f"Device -[ {deviceName} ]- not found."}
-
-@app.get("/personal/view/batteryTimeline/{week}", response_class=HTMLResponse)
+@app.get("/personal/view/batteryTimeline/{day}", response_class=HTMLResponse)
 async def batteryView(
-    week
+    day
+):
+    '''username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]'''
+    deviceName = "Yeeter"
+
+    generateBatteryDayView(os.path.join(LOGS_PATH,deviceName), os.path.join("batteryViewCreation/HTML", f"battery_level_{day}.html"), day)
+
+    try:
+        with open(os.path.join("batteryViewCreation/HTML", f"battery_level_{day}.html"), 'r') as file:  
+            html_as_string = file.read()
+    except Exception as e:
+        html_as_string = f"Error generating the graph: {e}"
+
+    return HTMLResponse(content=html_as_string)
+
+@app.get("/personal/view/locationTimeline/{day}", response_class=HTMLResponse)
+async def locationDayView(
+    day
 ):
     '''username = current_user.model_dump()['username']
     deviceName = users_db[username]["device_name"]'''
     deviceName = "Yeeter"
     iLogger = map_toolkit(deviceName)
-
-
-    iLogger.downloadFiles(os.path.join(os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY"),deviceName))
-
-    print(get_weeks(deviceName))
-
-    generateBatteryView(os.path.join(LOGS_PATH,deviceName), os.path.join("batteryViewCreation/HTML", f"battery_level_{week}.html"), week)
+    os.makedirs(os.path.join("mapCreation","map","days"),exist_ok=True)
+    iLogger.createDayPath(os.path.join(LOGS_PATH,deviceName), os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), day)
 
     try:
-        with open(os.path.join("batteryViewCreation/HTML", f"battery_level_{week}.html"), 'r') as file:  
+        with open(os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), 'r') as file:  
             html_as_string = file.read()
     except Exception as e:
         html_as_string = f"Error generating the graph: {e}"
@@ -988,72 +994,31 @@ async def batteryChooserView(current_user: Annotated[User, Depends(get_current_a
     return html_as_string
     
 
-'''
-def render_form(weeks):
-    options = "\n".join([f'<option value="{week}">{week}</option>' for week in weeks])
-    form_html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Battery Level Graphs</title>
-    </head>
-    <body>
-        <h1>Select a Week to Generate Battery Level Graph</h1>
-        <form method="POST" action="/personal/view/batteryTimeline">
-            <label for="week">Select Week:</label>
-            <select name="week" id="week">
-                {options}
-            </select>
-            <button type="submit">Generate Graph</button>
-        </form>
-    </body>
-    """ + """
-    <script>
-        document.querySelector('form[action="/personal/view/batteryTimeline"]').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Prevent the default form submission
+@app.get("/personal/view/timemachine", response_class= HTMLResponse)
+async def timemachine(current_user: Annotated[User, Depends(get_current_active_user)], request: apiRequest):
+    # Path to the directory containing the files
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+    iLogger = map_toolkit(deviceName)
     
-            const token = sessionStorage.getItem('access_token');
-            if (!token) {
-                alert('You must log in first!');
-                return;
-            }
-    
-            const form = event.target;
-            const formData = new FormData(form);
-            const responseDiv = document.getElementById('response');
-            responseDiv.innerHTML = "Loading...";
-    
-            try {
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-    
-                const contentType = response.headers.get("content-type");
-                if (response.ok) {
-                    if (contentType && contentType.indexOf("application/json") !== -1) {
-                        const data = await response.json();
-                        responseDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
-                    } else if (contentType && contentType.indexOf("text/html") !== -1) {
-                        const data = await response.text();
-                        responseDiv.innerHTML = `<iframe srcdoc="${data.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"></iframe>`;
-                    } else {
-                        responseDiv.innerHTML = "Unsupported content type";
-                    }
-                } else {
-                    const error = await response.json();
-                    responseDiv.innerHTML = `Error: ${error.detail}`;
-                }
-            } catch (error) {
-                responseDiv.innerHTML = `Network Error: ${error.message}`;
-            }
-        });
-    </script>
-    
-    </html>
-    """
-    return form_html'''
+    iLogger.downloadFiles(os.path.join(os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY"),deviceName))
+    directory_path = 'mapCreation/logs/Yeeter'
+
+    # List to hold the dates
+    dates = []
+
+    # Regex pattern to match the date part of the filename
+    pattern = re.compile(r'(\d{4}-\d{2}-\d{2})')
+
+    # Loop through all files in the directory
+    for filename in os.listdir(directory_path):
+        match = pattern.match(filename)
+        if match:
+            date_str = match.group(1)
+            dates.append(date_str)
+
+    # Sort the dates for better user experience
+    dates.sort()
+
+    return templates.TemplateResponse("timemachine.html", {"request": request, "dates": dates})
+
