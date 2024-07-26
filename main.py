@@ -888,12 +888,11 @@ async def batteryView(current_user: Annotated[User, Depends(get_current_active_u
     return html_as_string'''
 
 @app.get("/personal/view/batteryTimeline/{day}", response_class=HTMLResponse)
-async def batteryView(
-    day
-):
-    '''username = current_user.model_dump()['username']
-    deviceName = users_db[username]["device_name"]'''
-    deviceName = "Yeeter"
+async def batteryView(day,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
 
     generateBatteryDayView(os.path.join(LOGS_PATH,deviceName), os.path.join("batteryViewCreation/HTML", f"battery_level_{day}.html"), day)
 
@@ -906,13 +905,13 @@ async def batteryView(
     return HTMLResponse(content=html_as_string)
 
 @app.get("/personal/view/locationTimeline/{day}", response_class=HTMLResponse)
-async def locationDayView(
-    day
-):
-    '''username = current_user.model_dump()['username']
-    deviceName = users_db[username]["device_name"]'''
-    deviceName = "Yeeter"
+async def locationDayView(day,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
     iLogger = map_toolkit(deviceName)
+    
     os.makedirs(os.path.join("mapCreation","map","days"),exist_ok=True)
     iLogger.createDayPath(os.path.join(LOGS_PATH,deviceName), os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), day)
 
