@@ -202,7 +202,7 @@ class map_toolkit():
         if final_log != None:
             inputCSV = os.path.join(CSV_PATH,final_log)
 
-        lines_between_points(inputCSV,outputHTML)
+        timestampedMap(inputCSV,outputHTML)
 
 
     def createDayPath(self, CSV_PATH, HTML_PATH, dayOf):
@@ -286,7 +286,5 @@ class map_toolkit():
             mymap.add_child(arrow_text)
 
         # Save the map to an HTML file
-        mymap.save(HTML_PATH)
-
-        
+        mymap.save(HTML_PATH)   
 

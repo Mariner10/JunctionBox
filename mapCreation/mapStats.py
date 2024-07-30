@@ -439,3 +439,47 @@ def viewTodayPath(inputCSV,outputHTML):
     # Step 4: Save the map to an HTML file
     mymap.save(outputHTML)
 
+def timestampedMap(inputCSV,outputHTML):
+    # Load data from CSV
+    df = pd.read_csv(inputCSV)
+
+    # Convert epoch time to datetime
+    df['Time Object (EPOCH)'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
+
+    # Prepare data for folium TimestampedGeoJson
+    features = []
+    for _, row in df.iterrows():
+        feature = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [row['Longitude'], row['Latitude']],
+            },
+            'properties': {
+                'time': row['Time Object (EPOCH)'].strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'popup': f"Position Type: {row['Position Type']} <br>Battery: {row['Battery Level (%)']}%",
+                'icon': 'circle',
+                'iconstyle': {
+                    'color': 'red',
+                    'fillColor': 'red',
+                    'fillOpacity': 0.6,
+                    'radius': 5
+                }
+            }
+        }
+        features.append(feature)
+
+    # Create map
+    m = folium.Map(location=[df['Latitude'].mean(), df['Longitude'].mean()], zoom_start=7)
+
+    # Add TimestampedGeoJson
+    TimestampedGeoJson({
+        'type': 'FeatureCollection',
+        'features': features,
+    }, period='PT10S', add_last_point=True).add_to(m)
+
+    # Save map to HTML file
+    m.save(outputHTML)
+
+    print(f'timestampedMap saved to {outputHTML}')
+
