@@ -865,28 +865,6 @@ async def flipswitchView(current_user: Annotated[User, Depends(get_current_activ
             html_as_string = file.read()
     return html_as_string
 
-'''@app.get("/personal/view/batteryTimeline",response_class=HTMLResponse)
-async def batteryView(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
-    logRequest(request)
-
-    username = current_user.model_dump()['username']
-    deviceName = users_db[username]["device_name"]
-
-    iLogger = map_toolkit(deviceName)
-
-    iLogger.downloadFiles(os.path.join(os.getenv("ILOGGER_REMOTE_LOGS_DIRECTORY"),deviceName))
-    generateBatteryView(os.path.join(LOGS_PATH,deviceName),os.path.join(HTML_PATH,"battery_level_plot.html"))
-
-    try:
-        with open(f'{os.path.join(HTML_PATH,"battery_level_plot.html")}', 'r') as file:  
-            html_as_string = file.read()
-
-    except Exception as e:
-        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
-        with open(f'HTML/denied.html', 'r') as file:  # r to open file in READ mode
-            html_as_string = file.read()
-    return html_as_string'''
-
 @app.get("/personal/view/batteryTimeline/{day}", response_class=HTMLResponse)
 async def batteryView(day,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
     logRequest(request)
@@ -911,9 +889,28 @@ async def locationDayView(day,current_user: Annotated[User, Depends(get_current_
     username = current_user.model_dump()['username']
     deviceName = users_db[username]["device_name"]
     iLogger = map_toolkit(deviceName)
-    
+
     os.makedirs(os.path.join("mapCreation","map","days"),exist_ok=True)
     iLogger.createDayPath(os.path.join(LOGS_PATH,deviceName), os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), day)
+
+    try:
+        with open(os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), 'r') as file:  
+            html_as_string = file.read()
+    except Exception as e:
+        html_as_string = f"Error generating the graph: {e}"
+
+    return HTMLResponse(content=html_as_string)
+
+@app.get("/personal/view/timestampedDayPath/{day}", response_class=HTMLResponse)
+async def locationDayView(day,current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request)
+
+    username = current_user.model_dump()['username']
+    deviceName = users_db[username]["device_name"]
+    iLogger = map_toolkit(deviceName)
+
+    os.makedirs(os.path.join("mapCreation","map","days"),exist_ok=True)
+    iLogger.timestampedDayPath(os.path.join(LOGS_PATH,deviceName), os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), day)
 
     try:
         with open(os.path.join("mapCreation","map","days", f"day_timeline_{day}.html"), 'r') as file:  

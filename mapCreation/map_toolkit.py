@@ -202,7 +202,7 @@ class map_toolkit():
         if final_log != None:
             inputCSV = os.path.join(CSV_PATH,final_log)
 
-        timestampedMap(inputCSV,outputHTML)
+        lines_between_points(inputCSV,outputHTML)
 
 
     def createDayPath(self, CSV_PATH, HTML_PATH, dayOf):
@@ -288,3 +288,76 @@ class map_toolkit():
         # Save the map to an HTML file
         mymap.save(HTML_PATH)   
 
+    def timestampedDayPath(self,CSV_PATH, HTML_PATH, dayOf):
+        csv_files = glob.glob(os.path.join(CSV_PATH, '*.csv'))
+
+        data_frames = []
+
+        for file in csv_files:
+            temp_df = pd.read_csv(file)
+            data_frames.append(temp_df)
+
+        df = pd.concat(data_frames, ignore_index=True)
+
+        df['Time'] = pd.to_datetime(df['Time Object (EPOCH)'], unit='s')
+
+        df.set_index('Time', inplace=True)
+        df.sort_index(inplace=True)
+        df = df[~df.index.duplicated(keep='first')]
+
+        start_date = datetime.strptime(dayOf, "%Y-%m-%d")
+        end_date = start_date + timedelta(days=1)
+
+        nearest_start = df.index.asof(start_date)
+        nearest_end = df.index.asof(end_date)
+
+        if pd.isna(nearest_start) or pd.isna(nearest_end):
+            print(f"No data available for the specified day {start_date}.")
+            return "<p>No data available for the specified day.</p>"
+
+        df_day = df.loc[nearest_start:nearest_end]
+
+        if df_day.empty:
+            print("No data available for the specified day.")
+            return "<p>No data available for the specified day.</p>"
+
+        features = []
+        for i in range(len(df_day)):
+            
+            feature = {
+                'type': 'Feature',
+                'geometry': {
+                    'type': 'Point',
+                    'coordinates': [df_day.iloc[i]['Longitude'], df_day.iloc[i]['Latitude']],
+                },
+                'properties': {
+                    'time': str(datetime.fromtimestamp(float(df_day.iloc[i]['Time Object (EPOCH)'])).strftime('%Y-%m-%dT%H:%M:%SZ')),
+                    'popup': f"Position Type: {df_day.iloc[i]['Position Type']} <br>Battery: {df_day.iloc[i]['Battery Level (%)']}%",
+                    'icon': 'circle',
+                    'iconstyle': {
+                        'color': 'red',
+                        'fillColor': 'red',
+                        'fillOpacity': 0.6,
+                        'radius': 5
+                    }
+                }
+            }
+            features.append(feature)
+
+        m = folium.Map(location=[df['Latitude'].mean(), df['Longitude'].mean()], zoom_start=7)
+
+        sw = df[['Latitude', 'Longitude']].min().values.tolist()
+        ne = df[['Latitude', 'Longitude']].max().values.tolist()
+
+        m.fit_bounds([sw, ne])
+
+        # Add TimestampedGeoJson
+        TimestampedGeoJson({
+            'type': 'FeatureCollection',
+            'features': features,
+        }, period='PT10S', add_last_point=True).add_to(m)
+
+        # Save map to HTML file
+        m.save(HTML_PATH)
+
+        print(f'timestampedMap saved to {HTML_PATH}')
