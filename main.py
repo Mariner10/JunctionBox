@@ -1025,7 +1025,7 @@ async def timemachine(current_user: Annotated[User, Depends(get_current_active_u
 # GROCERY ERA
 
 @app.get("/upc/add/{upc_code}")
-async def upload_upc_code(upc_code, request: apiRequest,current_user: Annotated[User, Depends(get_current_active_user)]):
+async def upload_upc_code(upc_code, request: apiRequest):
     logRequest(request,send=False)
     result = add_code(upc_code)
 
