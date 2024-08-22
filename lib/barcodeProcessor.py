@@ -169,6 +169,26 @@ def add_code(key):
 
     return 1
 
+def edit_code(code,key,value):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                data = {}
+    else:
+        data = {}
+
+    keydata = data.get(code)
+    if keydata != None:
+        if key == "count":
+            keydata[key] = int(value)
+        keydata[key] = value
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=4)
+        return 1
+    else:
+        return None
 
 def get_code(code):
     if os.path.exists(file_path):
@@ -209,3 +229,41 @@ def get_all_codes():
         data = {}
 
     return data
+
+def sync_codes():
+    '''
+    Syncs the codes from the waiting file to the main file.\n
+    NoneType, NoneType -> No data waiting to be synced.\n
+    remaining_codes, codes -> The codes that are still waiting to sync, and the codes that did sync.
+    '''
+    if os.path.exists(waiting_file_path):
+        with open(waiting_file_path, 'r') as file:
+            try:
+                waitingdata = json.load(file)
+            except json.JSONDecodeError:
+                waitingdata = {}
+                with open(waiting_file_path, 'w') as file:
+                    json.dump(waitingdata, file, indent=4)
+                return None, None
+    else:
+        waitingdata = {}
+        with open(waiting_file_path, 'w') as file:
+            json.dump(waitingdata, file, indent=4)
+        return None, None
+
+    codes = []
+    for key in waitingdata:
+        result = add_code(key)
+        if result == 1:
+            codes.append(key)
+        elif result == 0 or result == -1:
+            pass
+        elif result == 2:
+            break
+
+    keysList = list(waitingdata.keys())
+    remaining_codes = [x for x in keysList if x not in codes]
+
+    return remaining_codes, codes
+
+

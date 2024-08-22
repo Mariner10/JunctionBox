@@ -28,7 +28,7 @@ import pandas as pd
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
 from mapCreation.map_toolkit import map_toolkit
 from lib.requestview import drawRequestView
-from lib.barcodeProcessor import add_code, get_code, get_all_codes
+from lib.barcodeProcessor import add_code, get_code, get_all_codes, sync_codes, edit_code
 from batteryViewCreation.batteryview import generateBatteryDayView
 from dotenv import load_dotenv
 
@@ -1025,7 +1025,7 @@ async def timemachine(current_user: Annotated[User, Depends(get_current_active_u
 # GROCERY ERA
 
 @app.get("/upc/add/{upc_code}")
-async def upload_upc_code(upc_code, request: apiRequest):
+async def upload_upc_code(upc_code, request: apiRequest,current_user: Annotated[User, Depends(get_current_active_user)]):
     logRequest(request,send=False)
     result = add_code(upc_code)
 
@@ -1051,3 +1051,35 @@ async def get_all_upc_codes(request: apiRequest):
     logRequest(request,send=False)
     result = get_all_codes()
     return result
+
+@app.get("/upc/sync")
+async def sync_upc_code(request: apiRequest):
+    logRequest(request,send=False)
+    remaining_codes, codes = sync_codes()
+    return {"remaining_codes": remaining_codes, "codes": codes}
+
+@app.get("/upc/viewall",response_class= HTMLResponse)
+async def upc_code_viewall(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
+    logRequest(request,send=False)
+
+    try:
+        with open(f'{os.path.join(HTML_PATH,"barcodeProcessor.html")}', 'r') as file:  
+            html_as_string = file.read()
+
+    except Exception as e:
+        ntfy.send("DEBUG ERROR!", f"Exception: {e}", os.getenv("NTFY_ALERTS"))
+        with open(f'HTML/denied.html', 'r') as file:  
+            html_as_string = file.read()
+    return html_as_string
+
+@app.get("/upc/edit/{code}/{key}/{value}")
+async def upc_code_edit(code,key,value,request: apiRequest,current_user: Annotated[User, Depends(get_current_active_user)]):
+    logRequest(request,send=False)
+    response = edit_code(code,key,value)
+    if response == None:
+        return {"message": f"{code} does not exist."}
+    elif response == 1:
+        return {"message": f"Set {code} key {key} to {value}."}
+    else:
+        return {"message": f"Failed to set {code}"}
+
