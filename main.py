@@ -28,6 +28,7 @@ import pandas as pd
 from turfpy import measurement as turfpyMeasure, transformation as turfpyTransform
 from mapCreation.map_toolkit import map_toolkit
 from lib.requestview import drawRequestView
+from lib.barcodeProcessor import add_code, get_code, get_all_codes
 from batteryViewCreation.batteryview import generateBatteryDayView
 from dotenv import load_dotenv
 
@@ -1018,3 +1019,35 @@ async def timemachine(current_user: Annotated[User, Depends(get_current_active_u
 
     return templates.TemplateResponse("timemachine.html", {"request": request, "dates": dates})
 
+
+
+
+# GROCERY ERA
+
+@app.get("/upc/add/{upc_code}")
+async def upload_upc_code(upc_code, request: apiRequest):
+    logRequest(request,send=False)
+    result = add_code(upc_code)
+
+    match result:
+        case 2:
+            return {"message": "API request limit hit. Item added to queue."}
+        case 0:
+            return {"message": "Error occurred gathering data, content was NoneType."}
+        case 1:
+            return {"message": "Success, new item added to entries."}
+        case -1:
+            return {"message": "Success, but we already had this item, just increased it's counter"}
+
+
+@app.get("/upc/get/{upc_code}")
+async def get_upc_code(upc_code, request: apiRequest):
+    logRequest(request,send=False)
+    result = get_code(upc_code)
+    return result
+
+@app.get("/upc/getall")
+async def get_all_upc_codes(request: apiRequest):
+    logRequest(request,send=False)
+    result = get_all_codes()
+    return result
