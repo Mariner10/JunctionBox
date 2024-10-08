@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Union, List
 import lib.ntfy as ntfy
-from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile, Form, Response
+from fastapi import Depends, FastAPI, HTTPException, status, File, UploadFile, Form, Response, Query
 from starlette.requests import Request as apiRequest
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
@@ -413,75 +413,6 @@ async def read_users_me(
 
     return {"deviceName": deviceName}
 
-
-most_recent_phone_data = {}
-@app.post("/iLogger/publish_data/")
-async def input_current_whereabouts(item: DeviceLocation):
-    global most_recent_phone_data
-
-    current_datetime = datetime.now()
-    devicetimestamp = item.timestamp
-    datetime_from_unix = datetime.fromtimestamp(devicetimestamp)
-    time_difference = current_datetime - datetime_from_unix
-
-    # Convert time difference to seconds
-    time_difference_seconds = str(time_difference.total_seconds())
-
-    most_recent_phone_data["Name"] = item.name
-    most_recent_phone_data["DeviceType"] = item.deviceType
-    most_recent_phone_data["Latitude"] = item.latitude
-    most_recent_phone_data["Longitude"] = item.longitude
-    most_recent_phone_data["BatteryLevel"] = item.batteryLevel  
-    most_recent_phone_data["PositionType"] = item.positionType
-    most_recent_phone_data["Timestamp"] = item.timestamp
-
-    print(f"Saved phone data: {most_recent_phone_data}")
- 
-    savedLocalesFilename = 'JSON/Zones.json'
-    LocalesDic = {}
-    
-
-    response = current_zone(item.latitude, item.longitude)
-
-    for zoneInfo in response:
-        if zoneInfo["Status"] == "Success":
-            data = zoneInfo["Data"]
-            properties = data.get("properties", {})
-
-            if properties:
-                name = properties.get("Name")
-
-                if os.path.isfile(savedLocalesFilename):
-                    with open(savedLocalesFilename) as fn:
-                        LocalesDic = json.load(fn)
-
-                    for place in LocalesDic:
-                        if name == place:
-                            LocalesDic[place]["Number"] += 1
-                            LocalesDic[place]["Timestamps"].append(item.timestamp)
-
-                            with open(savedLocalesFilename, 'w') as instances_file:
-                                json.dump(LocalesDic, instances_file, indent=4, separators=(',', ': '))
-        else:
-            print("Not in zone. Ignoring.")
-            pass
-
-
-            
-
-    return [{"Status": "Success", "Latency": f"{time_difference_seconds}s"}]
-
-@app.get("/iLogger/return_data/")
-async def output_current_whereabouts(current_user: Annotated[User, Depends(get_current_active_user)],request: apiRequest):
-    global most_recent_phone_data
-    
-
-    if most_recent_phone_data == {}:
-        print(f"No phone data found!")
-        return [{"Status": "Failed", "Info": "No phone data available."}]
-    else:   
-        print(f"Returned phone data: {most_recent_phone_data}")
-        return [{"Status": "Success", "Data": most_recent_phone_data}]
 
 @app.post("/iLogger/create_zone/")
 async def create_zone(current_user: Annotated[User, Depends(get_current_active_user)], zoneinfo: circleZone):
@@ -1083,3 +1014,23 @@ async def upc_code_edit(code,key,value,request: apiRequest,current_user: Annotat
     else:
         return {"message": f"Failed to set {code}"}
 
+
+
+@app.get("/location/")
+async def current_whereabouts(
+    lat: float = Query(..., description="Latitude of the device"),
+    lon: float = Query(..., description="Longitude of the device"),
+    alt: float = Query(..., description="Altitude of the device"),
+    speed: float = Query(..., description="Speed of the device"),
+):
+    # Here, you can process the location data (e.g., save to a database, log, etc.)
+    
+    print({
+        "message": "Location received successfully.",
+        "data": {
+            "latitude": lat,
+            "longitude": lon,
+            "altitude": alt,
+            "speed": speed,
+        }
+    })
